@@ -6,7 +6,7 @@ Library with support for de/serialization, parsing and executing on data
 structures and network messages related to Bitcoin and other blockchain-based
 currencies.
 
-[Documentation](https://docs.rs/bitcoin/)
+[Documentation](https://docs.rs/syscoin/)
 
 Supports (or should support)
 
