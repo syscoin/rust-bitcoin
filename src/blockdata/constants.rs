@@ -99,9 +99,9 @@ pub fn genesis_block(network: Network) -> GenesisBlock {
                     version: 1,
                     prev_blockhash: Default::default(),
                     merkle_root: txdata.merkle_root(),
-                    time: 1231006505,
-                    bits: 0x1d00ffff,
-                    nonce: 2083236893
+                    time: 1549246364,
+                    bits: 0x1e0ffff0,
+                    nonce: 204673
                 },
                 txdata: txdata
             }
@@ -113,9 +113,9 @@ pub fn genesis_block(network: Network) -> GenesisBlock {
                     version: 1,
                     prev_blockhash: Default::default(),
                     merkle_root: txdata.merkle_root(),
-                    time: 1296688602,
-                    bits: 0x1d00ffff,
-                    nonce: 414098458
+                    time: 1544509441,
+                    bits: 0x1e0ffff0,
+                    nonce: 167093
                 },
                 txdata: txdata
             }
@@ -127,9 +127,9 @@ pub fn genesis_block(network: Network) -> GenesisBlock {
                     version: 1,
                     prev_blockhash: Default::default(),
                     merkle_root: txdata.merkle_root(),
-                    time: 1296688602,
+                    time: 1544509441,
                     bits: 0x207fffff,
-                    nonce: 2
+                    nonce: 1
                 },
                 txdata: txdata
             }
@@ -178,11 +178,11 @@ mod test {
         assert_eq!(gen.header.prev_blockhash, Default::default());
         assert_eq!(format!("{:x}", gen.header.merkle_root),
                    "4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b".to_string());
-        assert_eq!(gen.header.time, 1231006505);
-        assert_eq!(gen.header.bits, 0x1d00ffff);
-        assert_eq!(gen.header.nonce, 2083236893);
+        assert_eq!(gen.header.time, 1549246364);
+        assert_eq!(gen.header.bits, 0x1e0ffff0);
+        assert_eq!(gen.header.nonce, 204673);
         assert_eq!(format!("{:x}", gen.header.bitcoin_hash()),
-                   "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f".to_string());
+                   "0000052c0f76a21b6313429a74fbc75a409833b6e501ab7c09c463db32adab41".to_string());
     }
 
     #[test]
@@ -192,11 +192,11 @@ mod test {
         assert_eq!(gen.header.prev_blockhash, Default::default());
         assert_eq!(format!("{:x}", gen.header.merkle_root),
                   "4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b".to_string());
-        assert_eq!(gen.header.time, 1296688602);
-        assert_eq!(gen.header.bits, 0x1d00ffff);
-        assert_eq!(gen.header.nonce, 414098458);
+        assert_eq!(gen.header.time, 1544509441);
+        assert_eq!(gen.header.bits, 0x1e0ffff0);
+        assert_eq!(gen.header.nonce, 167093);
         assert_eq!(format!("{:x}", gen.header.bitcoin_hash()),
-                   "000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943".to_string());
+                   "00000199b49877c0e552f25462a80ef421fd2a15c7f5978683adc2b6b5c5ea02".to_string());
     }
 }
 
