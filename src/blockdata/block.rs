@@ -208,8 +208,8 @@ impl BitcoinHash for Block {
         self.header.bitcoin_hash()
     }
 }
-impl From<BlockHeader> for BaseHeader {
-    fn from(item: BlockHeader) -> Self {
+impl From<&BlockHeader> for BaseHeader {
+    fn from(item: &BlockHeader) -> Self {
         BaseHeader { version: item.version, prev_blockhash: item.prev_blockhash, merkle_root: item.merkle_root, time: item.time, bits: item.bits, nonce: item.nonce  }
     }
 }
@@ -249,7 +249,6 @@ mod tests {
         // [test] TODO: check the transaction data
     
         assert_eq!(serialize(&real_decode), some_block);
-  
     }
     
     #[test]
