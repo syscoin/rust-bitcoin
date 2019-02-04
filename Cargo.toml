@@ -12,7 +12,7 @@
 
 [package]
 name = "syscoin"
-version = "0.16.2"
+version = "0.16.3"
 authors = ["Jagdeep Sidhu <jsidhu@blockchainfoundry.co>"]
 license = "CC0-1.0"
 homepage = "https://github.com/sidhujag/rust-bitcoin/"
