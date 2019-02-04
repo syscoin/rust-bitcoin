@@ -24,7 +24,7 @@ use std::default::Default;
 use blockdata::opcodes;
 use blockdata::script;
 use blockdata::transaction::{OutPoint, Transaction, TxOut, TxIn};
-use blockdata::block::{Block, BlockHeader};
+use blockdata::block::{GenesisBlock, BlockHeader};
 use network::constants::Network;
 use util::misc::hex_bytes;
 use util::hash::MerkleRoot;
@@ -35,11 +35,11 @@ pub static MAX_SEQUENCE: u32 = 0xFFFFFFFF;
 /// How many satoshis are in "one bitcoin"
 pub static COIN_VALUE: u64 = 100_000_000;
 /// How many seconds between blocks we expect on average
-pub static TARGET_BLOCK_SPACING: u32 = 600;
+pub static TARGET_BLOCK_SPACING: u32 = 60;
 /// How many blocks between diffchanges
-pub static DIFFCHANGE_INTERVAL: u32 = 2016;
+pub static DIFFCHANGE_INTERVAL: u32 = 360;
 /// How much time on average should occur between diffchanges
-pub static DIFFCHANGE_TIMESPAN: u32 = 14 * 24 * 3600;
+pub static DIFFCHANGE_TIMESPAN: u32 = 6 * 60 * 60;
 
 /// In Bitcoind this is insanely described as ~((u256)0 >> 32)
 pub fn max_target(_: Network) -> Uint256 {
@@ -50,7 +50,7 @@ pub fn max_target(_: Network) -> Uint256 {
 /// since keeping everything below this value should prevent overflows
 /// if you are doing anything remotely sane with monetary values).
 pub fn max_money(_: Network) -> u64 {
-    21_000_000 * COIN_VALUE
+    888_000_000 * COIN_VALUE
 }
 
 /// Constructs and returns the coinbase (and only) transaction of the Bitcoin genesis block
@@ -90,11 +90,11 @@ fn bitcoin_genesis_tx() -> Transaction {
 }
 
 /// Constructs and returns the genesis block
-pub fn genesis_block(network: Network) -> Block {
+pub fn genesis_block(network: Network) -> GenesisBlock {
     match network {
         Network::Bitcoin => {
             let txdata = vec![bitcoin_genesis_tx()];
-            Block {
+            GenesisBlock {
                 header: BlockHeader {
                     version: 1,
                     prev_blockhash: Default::default(),
@@ -108,7 +108,7 @@ pub fn genesis_block(network: Network) -> Block {
         }
         Network::Testnet => {
             let txdata = vec![bitcoin_genesis_tx()];
-            Block {
+            GenesisBlock {
                 header: BlockHeader {
                     version: 1,
                     prev_blockhash: Default::default(),
@@ -122,7 +122,7 @@ pub fn genesis_block(network: Network) -> Block {
         }
         Network::Regtest => {
             let txdata = vec![bitcoin_genesis_tx()];
-            Block {
+            GenesisBlock {
                 header: BlockHeader {
                     version: 1,
                     prev_blockhash: Default::default(),
