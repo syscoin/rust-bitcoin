@@ -27,15 +27,19 @@
 use std::default::Default;
 use std::{error, fmt};
 
+use crypto::digest::Digest;
 #[cfg(feature = "serde")] use serde;
 
 use blockdata::opcodes;
 use consensus::encode::{Decodable, Encodable};
 use consensus::encode::{self, Decoder, Encoder};
-use bitcoin_hashes::{hash160, sha256, Hash};
+use util::hash::Hash160;
 #[cfg(feature="bitcoinconsensus")] use bitcoinconsensus;
 #[cfg(feature="bitcoinconsensus")] use std::convert;
-#[cfg(feature="bitcoinconsensus")] use bitcoin_hashes::sha256d;
+#[cfg(feature="bitcoinconsensus")] use util::hash::Sha256dHash;
+
+#[cfg(feature="fuzztarget")]      use fuzz_util::sha2::Sha256;
+#[cfg(not(feature="fuzztarget"))] use crypto::sha2::Sha256;
 
 #[derive(Clone, Default, PartialOrd, Ord, PartialEq, Eq, Hash)]
 /// A Bitcoin script
@@ -159,7 +163,7 @@ pub enum Error {
     BitcoinConsensus(bitcoinconsensus::Error),
     #[cfg(feature="bitcoinconsensus")]
     /// Can not find the spent transaction
-    UnknownSpentTransaction(sha256d::Hash),
+    UnknownSpentTransaction(Sha256dHash),
     #[cfg(feature="bitcoinconsensus")]
     /// The spent transaction does not have the referred output
     WrongSpentOutputIndex(usize),
@@ -239,7 +243,7 @@ fn build_scriptint(n: i64) -> Vec<u8> {
 /// This is a bit crazy and subtle, but it makes sense: you can load
 /// 32-bit numbers and do anything with them, which back when mult/div
 /// was allowed, could result in up to a 64-bit number. We don't want
-/// overflow since that's surprising --- and we don't want numbers that
+/// overflow since that's suprising --- and we don't want numbers that
 /// don't fit in 64 bits (for efficiency on modern processors) so we
 /// simply say, anything in excess of 32 bits is no longer a number.
 /// This is basically a ranged type implementation.
@@ -301,7 +305,7 @@ impl Script {
     /// Compute the P2SH output corresponding to this redeem script
     pub fn to_p2sh(&self) -> Script {
         Builder::new().push_opcode(opcodes::all::OP_HASH160)
-                      .push_slice(&hash160::Hash::hash(&self.0)[..])
+                      .push_slice(&Hash160::from_data(&self.0)[..])
                       .push_opcode(opcodes::all::OP_EQUAL)
                       .into_script()
     }
@@ -309,8 +313,12 @@ impl Script {
     /// Compute the P2WSH output corresponding to this witnessScript (aka the "witness redeem
     /// script")
     pub fn to_v0_p2wsh(&self) -> Script {
+        let mut tmp = [0; 32];
+        let mut sha2 = Sha256::new();
+        sha2.input(&self.0);
+        sha2.result(&mut tmp);
         Builder::new().push_int(0)
-                      .push_slice(&sha256::Hash::hash(&self.0)[..])
+                      .push_slice(&tmp)
                       .into_script()
     }
 

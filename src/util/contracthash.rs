@@ -12,7 +12,7 @@
 // If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //
 
-//! Pay-to-contract-hash support
+//! Pay-to-contract-hash supporte
 //!
 //! See Appendix A of the Blockstream sidechains whitepaper
 //! at http://blockstream.com/sidechains.pdf for details of
@@ -20,15 +20,19 @@
 
 use secp256k1::{self, Secp256k1};
 use secp256k1::key::{PublicKey, SecretKey};
-use bitcoin_hashes::{hash160, sha256, Hash, HashEngine, Hmac, HmacEngine};
 use blockdata::{opcodes, script};
+use crypto::hmac;
+use crypto::mac::Mac;
 
 use std::{error, fmt};
 
 use network::constants::Network;
-use util::address;
+use util::{address, hash};
 
-/// Encoding of "pubkey here" in script; from Bitcoin Core `src/script/script.h`
+#[cfg(feature="fuzztarget")]      use fuzz_util::sha2;
+#[cfg(not(feature="fuzztarget"))] use crypto::sha2;
+
+/// Encoding of "pubkey here" in script; from bitcoin core `src/script/script.h`
 static PUBKEY: u8 = 0xFE;
 
 /// A contract-hash error
@@ -169,10 +173,11 @@ impl<'a> From<&'a [u8]> for Template {
 pub fn tweak_keys<C: secp256k1::Verification>(secp: &Secp256k1<C>, keys: &[PublicKey], contract: &[u8]) -> Result<Vec<PublicKey>, Error> {
     let mut ret = Vec::with_capacity(keys.len());
     for mut key in keys.iter().cloned() {
-        let mut hmac_engine: HmacEngine<sha256::Hash> = HmacEngine::new(&key.serialize());
-        hmac_engine.input(contract);
-        let hmac_result: Hmac<sha256::Hash> = Hmac::from_engine(hmac_engine);
-        let hmac_sk = SecretKey::from_slice(&hmac_result[..]).map_err(Error::BadTweak)?;
+        let mut hmac_raw = [0; 32];
+        let mut hmac = hmac::Hmac::new(sha2::Sha256::new(), &key.serialize());
+        hmac.input(contract);
+        hmac.raw_result(&mut hmac_raw);
+        let hmac_sk = SecretKey::from_slice(&hmac_raw).map_err(Error::BadTweak)?;
         key.add_exp_assign(secp, &hmac_sk[..]).map_err(Error::Secp)?;
         ret.push(key);
     }
@@ -181,10 +186,11 @@ pub fn tweak_keys<C: secp256k1::Verification>(secp: &Secp256k1<C>, keys: &[Publi
 
 /// Compute a tweak from some given data for the given public key
 pub fn compute_tweak(pk: &PublicKey, contract: &[u8]) -> Result<SecretKey, Error> {
-    let mut hmac_engine: HmacEngine<sha256::Hash> = HmacEngine::new(&pk.serialize());
-    hmac_engine.input(contract);
-    let hmac_result: Hmac<sha256::Hash> = Hmac::from_engine(hmac_engine);
-    SecretKey::from_slice(&hmac_result[..]).map_err(Error::BadTweak)
+    let mut hmac_raw = [0; 32];
+    let mut hmac = hmac::Hmac::new(sha2::Sha256::new(), &pk.serialize());
+    hmac.input(contract);
+    hmac.raw_result(&mut hmac_raw);
+    SecretKey::from_slice(&hmac_raw).map_err(Error::BadTweak)
 }
 
 /// Tweak a secret key using some arbitrary data (calls `compute_tweak` internally)
@@ -212,7 +218,7 @@ pub fn create_address<C: secp256k1::Verification>(secp: &Secp256k1<C>,
     Ok(address::Address {
         network: network,
         payload: address::Payload::ScriptHash(
-            hash160::Hash::hash(&script[..])
+            hash::Hash160::from_data(&script[..])
         )
     })
 }

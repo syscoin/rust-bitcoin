@@ -166,7 +166,7 @@ mod test {
         assert_eq!(gen.output[0].value, 50 * COIN_VALUE);
         assert_eq!(gen.lock_time, 0);
 
-        assert_eq!(format!("{:x}", gen.bitcoin_hash()),
+        assert_eq!(gen.bitcoin_hash().be_hex_string(),
                    "4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b".to_string());
     }
 
@@ -176,12 +176,12 @@ mod test {
 
         assert_eq!(gen.header.version, 1);
         assert_eq!(gen.header.prev_blockhash, Default::default());
-        assert_eq!(format!("{:x}", gen.header.merkle_root),
+        assert_eq!(gen.header.merkle_root.be_hex_string(),
                    "4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b".to_string());
         assert_eq!(gen.header.time, 1549246364);
         assert_eq!(gen.header.bits, 0x1e0ffff0);
         assert_eq!(gen.header.nonce, 204673);
-        assert_eq!(format!("{:x}", gen.header.bitcoin_hash()),
+        assert_eq!(gen.header.bitcoin_hash().be_hex_string(),
                    "0000052c0f76a21b6313429a74fbc75a409833b6e501ab7c09c463db32adab41".to_string());
     }
 
@@ -190,12 +190,12 @@ mod test {
         let gen = genesis_block(Network::Testnet);
         assert_eq!(gen.header.version, 1);
         assert_eq!(gen.header.prev_blockhash, Default::default());
-        assert_eq!(format!("{:x}", gen.header.merkle_root),
+        assert_eq!(gen.header.merkle_root.be_hex_string(),
                   "4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b".to_string());
         assert_eq!(gen.header.time, 1544509441);
         assert_eq!(gen.header.bits, 0x1e0ffff0);
         assert_eq!(gen.header.nonce, 167093);
-        assert_eq!(format!("{:x}", gen.header.bitcoin_hash()),
+        assert_eq!(gen.header.bitcoin_hash().be_hex_string(),
                    "00000199b49877c0e552f25462a80ef421fd2a15c7f5978683adc2b6b5c5ea02".to_string());
     }
 }

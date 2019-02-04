@@ -34,25 +34,25 @@
 //! let network = Network::Bitcoin;
 //! let bytes = serialize(&network);
 //!
-//! assert_eq!(&bytes[..], &[0xF9, 0xBE, 0xB4, 0xD9]);
+//! assert_eq!(&bytes[..], &[0xCE, 0xE2, 0xCA, 0xFF]);
 //! ```
 
 use consensus::encode::{Decodable, Encodable};
 use consensus::encode::{self, Encoder, Decoder};
 
 /// Version of the protocol as appearing in network message headers
-pub const PROTOCOL_VERSION: u32 = 70001;
+pub const PROTOCOL_VERSION: u32 = 70400;
 /// Bitfield of services provided by this node
 pub const SERVICES: u64 = 0;
 /// User agent as it appears in the version message
-pub const USER_AGENT: &'static str = "bitcoin-rust v0.1";
+pub const USER_AGENT: &'static str = "syscoin-rust v0.1";
 
 user_enum! {
     /// The cryptocurrency to act on
     #[derive(Copy, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
     pub enum Network {
         /// Classic Bitcoin
-        Bitcoin <-> "bitcoin",
+        Bitcoin <-> "syscoin",
         /// Bitcoin's testnet
         Testnet <-> "testnet",
         /// Bitcoin's regtest
@@ -68,14 +68,14 @@ impl Network {
     /// ```rust
     /// use bitcoin::network::constants::Network;
     ///
-    /// assert_eq!(Some(Network::Bitcoin), Network::from_magic(0xD9B4BEF9));
+    /// assert_eq!(Some(Network::Bitcoin), Network::from_magic(0xFFCAE2CE));
     /// assert_eq!(None, Network::from_magic(0xFFFFFFFF));
     /// ```
     pub fn from_magic(magic: u32) -> Option<Network> {
         // Note: any new entries here must be added to `magic` below
         match magic {
-            0xD9B4BEF9 => Some(Network::Bitcoin),
-            0x0709110B => Some(Network::Testnet),
+            0xFFCAE2CE => Some(Network::Bitcoin),
+            0xFECAE2CE => Some(Network::Testnet),
             0xDAB5BFFA => Some(Network::Regtest),
             _ => None
         }
@@ -90,13 +90,13 @@ impl Network {
     /// use bitcoin::network::constants::Network;
     ///
     /// let network = Network::Bitcoin;
-    /// assert_eq!(network.magic(), 0xD9B4BEF9);
+    /// assert_eq!(network.magic(), 0xFFCAE2CE);
     /// ```
     pub fn magic(&self) -> u32 {
         // Note: any new entries here must be added to `from_magic` above
         match *self {
-            Network::Bitcoin => 0xD9B4BEF9,
-            Network::Testnet => 0x0709110B,
+            Network::Bitcoin => 0xFFCAE2CE,
+            Network::Testnet => 0xFECAE2CE,
             Network::Regtest => 0xDAB5BFFA,
         }
     }
@@ -129,12 +129,12 @@ mod tests {
 
   #[test]
   fn serialize_test() {
-    assert_eq!(serialize(&Network::Bitcoin), vec![0xf9, 0xbe, 0xb4, 0xd9]);
-    assert_eq!(serialize(&Network::Testnet), vec![0x0b, 0x11, 0x09, 0x07]);
+    assert_eq!(serialize(&Network::Bitcoin), vec![0xce, 0xe2, 0xca, 0xff]);
+    assert_eq!(serialize(&Network::Testnet), vec![0xce, 0xe2, 0xca, 0xfe]);
     assert_eq!(serialize(&Network::Regtest), vec![0xfa, 0xbf, 0xb5, 0xda]);
 
-    assert_eq!(deserialize(&[0xf9, 0xbe, 0xb4, 0xd9]).ok(), Some(Network::Bitcoin));
-    assert_eq!(deserialize(&[0x0b, 0x11, 0x09, 0x07]).ok(), Some(Network::Testnet));
+    assert_eq!(deserialize(&[0xce, 0xe2, 0xca, 0xff]).ok(), Some(Network::Bitcoin));
+    assert_eq!(deserialize(&[0xce, 0xe2, 0xca, 0xfe]).ok(), Some(Network::Testnet));
     assert_eq!(deserialize(&[0xfa, 0xbf, 0xb5, 0xda]).ok(), Some(Network::Regtest));
 
     let bad: Result<Network, _> = deserialize("fakenet".as_bytes());
@@ -143,11 +143,11 @@ mod tests {
 
   #[test]
   fn string_test() {
-      assert_eq!(Network::Bitcoin.to_string(), "bitcoin");
+      assert_eq!(Network::Bitcoin.to_string(), "syscoin");
       assert_eq!(Network::Testnet.to_string(), "testnet");
       assert_eq!(Network::Regtest.to_string(), "regtest");
 
-      assert_eq!("bitcoin".parse::<Network>().unwrap(), Network::Bitcoin);
+      assert_eq!("syscoin".parse::<Network>().unwrap(), Network::Bitcoin);
       assert_eq!("testnet".parse::<Network>().unwrap(), Network::Testnet);
       assert_eq!("regtest".parse::<Network>().unwrap(), Network::Regtest);
       assert!("fakenet".parse::<Network>().is_err());

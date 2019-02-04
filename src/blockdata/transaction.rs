@@ -28,10 +28,7 @@ use std::default::Default;
 use std::fmt;
 #[cfg(feature="bitcoinconsensus")] use std::collections::HashMap;
 
-use bitcoin_hashes::{self, sha256d, Hash};
-use bitcoin_hashes::hex::FromHex;
-
-use util::hash::BitcoinHash;
+use util::hash::{BitcoinHash, Sha256dHash, HexError};
 #[cfg(feature="bitcoinconsensus")] use blockdata::script;
 use blockdata::script::Script;
 use consensus::encode::{self, serialize, Encoder, Decoder};
@@ -41,7 +38,7 @@ use consensus::encode::{Encodable, Decodable, VarInt};
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct OutPoint {
     /// The referenced transaction's txid
-    pub txid: sha256d::Hash,
+    pub txid: Sha256dHash,
     /// The index of the referenced output in its transaction's vout
     pub vout: u32,
 }
@@ -96,7 +93,7 @@ impl fmt::Display for OutPoint {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum ParseOutPointError {
     /// Error in TXID part.
-    Txid(bitcoin_hashes::Error),
+    Txid(HexError),
     /// Error in vout part.
     Vout(::std::num::ParseIntError),
     /// Error in general format.
@@ -167,7 +164,7 @@ impl ::std::str::FromStr for OutPoint {
             return Err(ParseOutPointError::Format);
         }
         Ok(OutPoint {
-            txid: sha256d::Hash::from_hex(&s[..colon]).map_err(ParseOutPointError::Txid)?,
+            txid: Sha256dHash::from_hex(&s[..colon]).map_err(ParseOutPointError::Txid)?,
             vout: parse_vout(&s[colon+1..])?,
         })
     }
@@ -235,7 +232,7 @@ impl Default for TxOut {
 /// However, in protocols where transactions may legitimately have 0 inputs, e.g.
 /// when parties are cooperatively funding a transaction, the "00 means Segwit"
 /// heuristic does not work. Since Segwit requires such a transaction be encoded
-/// in the original transaction format (since it has no inputs and therefore
+/// in the the original transaction format (since it has no inputs and therefore
 /// no input witnesses), a traditionally encoded transaction may have the `0001`
 /// Segwit flag in it, which confuses most Segwit parsers including the one in
 /// Bitcoin Core.
@@ -260,7 +257,7 @@ impl Transaction {
     /// Computes a "normalized TXID" which does not include any signatures.
     /// This gives a way to identify a transaction that is ``the same'' as
     /// another in the sense of having same inputs and outputs.
-    pub fn ntxid(&self) -> sha256d::Hash {
+    pub fn ntxid(&self) -> Sha256dHash {
         let cloned_tx = Transaction {
             version: self.version,
             lock_time: self.lock_time,
@@ -274,13 +271,15 @@ impl Transaction {
     /// to the output of `BitcoinHash::bitcoin_hash()`, but for segwit transactions,
     /// this will give the correct txid (not including witnesses) while `bitcoin_hash`
     /// will also hash witnesses.
-    pub fn txid(&self) -> sha256d::Hash {
-        let mut enc = sha256d::Hash::engine();
+    pub fn txid(&self) -> Sha256dHash {
+        use util::hash::Sha256dEncoder;
+
+        let mut enc = Sha256dEncoder::new();
         self.version.consensus_encode(&mut enc).unwrap();
         self.input.consensus_encode(&mut enc).unwrap();
         self.output.consensus_encode(&mut enc).unwrap();
         self.lock_time.consensus_encode(&mut enc).unwrap();
-        sha256d::Hash::from_engine(enc)
+        enc.into_hash()
     }
 
     /// Computes a signature hash for a given input index with a given sighash flag.
@@ -296,17 +295,17 @@ impl Transaction {
     /// # Panics
     /// Panics if `input_index` is greater than or equal to `self.input.len()`
     ///
-    pub fn signature_hash(&self, input_index: usize, script_pubkey: &Script, sighash_u32: u32) -> sha256d::Hash {
+    pub fn signature_hash(&self, input_index: usize, script_pubkey: &Script, sighash_u32: u32) -> Sha256dHash {
         assert!(input_index < self.input.len());  // Panic on OOB
 
         let (sighash, anyone_can_pay) = SigHashType::from_u32(sighash_u32).split_anyonecanpay_flag();
 
         // Special-case sighash_single bug because this is easy enough.
         if sighash == SigHashType::Single && input_index >= self.output.len() {
-            return sha256d::Hash::from_slice(&[1, 0, 0, 0, 0, 0, 0, 0,
-                                               0, 0, 0, 0, 0, 0, 0, 0,
-                                               0, 0, 0, 0, 0, 0, 0, 0,
-                                               0, 0, 0, 0, 0, 0, 0, 0]).unwrap();
+            return Sha256dHash::from(&[1, 0, 0, 0, 0, 0, 0, 0,
+                                       0, 0, 0, 0, 0, 0, 0, 0,
+                                       0, 0, 0, 0, 0, 0, 0, 0,
+                                       0, 0, 0, 0, 0, 0, 0, 0][..]);
         }
 
         // Build tx to sign
@@ -351,7 +350,7 @@ impl Transaction {
         // hash the result
         let mut raw_vec = serialize(&tx);
         raw_vec.write_u32::<LittleEndian>(sighash_u32).unwrap();
-        sha256d::Hash::hash(&raw_vec)
+        Sha256dHash::from_data(&raw_vec)
     }
 
     /// Gets the "weight" of this transaction, as defined by BIP141. For transactions with an empty
@@ -398,7 +397,7 @@ impl Transaction {
 
     #[cfg(feature="bitcoinconsensus")]
     /// Verify that this transaction is able to spend some outputs of spent transactions
-    pub fn verify(&self, spent: &HashMap<sha256d::Hash, Transaction>) -> Result<(), script::Error> {
+    pub fn verify(&self, spent: &HashMap<Sha256dHash, Transaction>) -> Result<(), script::Error> {
         let tx = serialize(&*self);
         for (idx, input) in self.input.iter().enumerate() {
             if let Some(ref s) = spent.get(&input.previous_output.txid) {
@@ -421,10 +420,12 @@ impl Transaction {
 }
 
 impl BitcoinHash for Transaction {
-    fn bitcoin_hash(&self) -> sha256d::Hash {
-        let mut enc = sha256d::Hash::engine();
+    fn bitcoin_hash(&self) -> Sha256dHash {
+        use util::hash::Sha256dEncoder;
+
+        let mut enc = Sha256dEncoder::new();
         self.consensus_encode(&mut enc).unwrap();
-        sha256d::Hash::from_engine(enc)
+        enc.into_hash()
     }
 }
 
@@ -598,11 +599,8 @@ mod tests {
     use blockdata::script::Script;
     use consensus::encode::serialize;
     use consensus::encode::deserialize;
-    use util::hash::BitcoinHash;
+    use util::hash::{BitcoinHash, Sha256dHash};
     use util::misc::hex_bytes;
-
-    use bitcoin_hashes::{sha256d, Hash};
-    use bitcoin_hashes::hex::FromHex;
 
     #[test]
     fn test_outpoint() {
@@ -619,20 +617,20 @@ mod tests {
         assert_eq!(OutPoint::from_str("5df6e0e2761359d30a8275058e299fcc0381534545f55cf43e41983f5d4c9456:+42"),
                    Err(ParseOutPointError::VoutNotCanonical));
         assert_eq!(OutPoint::from_str("i don't care:1"),
-                   Err(ParseOutPointError::Txid(sha256d::Hash::from_hex("i don't care").unwrap_err())));
+                   Err(ParseOutPointError::Txid(Sha256dHash::from_hex("i don't care").unwrap_err())));
         assert_eq!(OutPoint::from_str("5df6e0e2761359d30a8275058e299fcc0381534545f55cf43e41983f5d4c945X:1"),
-                   Err(ParseOutPointError::Txid(sha256d::Hash::from_hex("5df6e0e2761359d30a8275058e299fcc0381534545f55cf43e41983f5d4c945X").unwrap_err())));
+                   Err(ParseOutPointError::Txid(Sha256dHash::from_hex("5df6e0e2761359d30a8275058e299fcc0381534545f55cf43e41983f5d4c945X").unwrap_err())));
         assert_eq!(OutPoint::from_str("5df6e0e2761359d30a8275058e299fcc0381534545f55cf43e41983f5d4c9456:lol"),
                    Err(ParseOutPointError::Vout(u32::from_str("lol").unwrap_err())));
  
         assert_eq!(OutPoint::from_str("5df6e0e2761359d30a8275058e299fcc0381534545f55cf43e41983f5d4c9456:42"),
                    Ok(OutPoint{
-                       txid: sha256d::Hash::from_hex("5df6e0e2761359d30a8275058e299fcc0381534545f55cf43e41983f5d4c9456").unwrap(),
+                       txid: Sha256dHash::from_hex("5df6e0e2761359d30a8275058e299fcc0381534545f55cf43e41983f5d4c9456").unwrap(),
                        vout: 42,
                    }));
         assert_eq!(OutPoint::from_str("5df6e0e2761359d30a8275058e299fcc0381534545f55cf43e41983f5d4c9456:0"),
                    Ok(OutPoint{
-                       txid: sha256d::Hash::from_hex("5df6e0e2761359d30a8275058e299fcc0381534545f55cf43e41983f5d4c9456").unwrap(),
+                       txid: Sha256dHash::from_hex("5df6e0e2761359d30a8275058e299fcc0381534545f55cf43e41983f5d4c9456").unwrap(),
                        vout: 0,
                    }));
     }
@@ -667,13 +665,13 @@ mod tests {
         assert_eq!(realtx.input.len(), 1);
         // In particular this one is easy to get backward -- in bitcoin hashes are encoded
         // as little-endian 256-bit numbers rather than as data strings.
-        assert_eq!(format!("{:x}", realtx.input[0].previous_output.txid),
+        assert_eq!(realtx.input[0].previous_output.txid.be_hex_string(),
                    "ce9ea9f6f5e422c6a9dbcddb3b9a14d1c78fab9ab520cb281aa2a74a09575da1".to_string());
         assert_eq!(realtx.input[0].previous_output.vout, 1);
         assert_eq!(realtx.output.len(), 1);
         assert_eq!(realtx.lock_time, 0);
 
-        assert_eq!(format!("{:x}", realtx.bitcoin_hash()),
+        assert_eq!(realtx.bitcoin_hash().be_hex_string(),
                    "a6eab3c14ab5272a58a5ba91505ba1a4b6d7a3a9fcbd187b6cd99a7b6d548cb7".to_string());
         assert_eq!(realtx.get_weight(), 193*4);
     }
@@ -698,7 +696,7 @@ mod tests {
         let mut tx: Transaction = deserialize(&hex_tx).unwrap();
 
         let old_ntxid = tx.ntxid();
-        assert_eq!(format!("{:x}", old_ntxid), "c3573dbea28ce24425c59a189391937e00d255150fa973d59d61caf3a06b601d");
+        assert_eq!(old_ntxid.be_hex_string(), "c3573dbea28ce24425c59a189391937e00d255150fa973d59d61caf3a06b601d");
         // changing sigs does not affect it
         tx.input[0].script_sig = Script::new();
         assert_eq!(old_ntxid, tx.ntxid());
@@ -742,8 +740,8 @@ mod tests {
         ).unwrap();
         let tx: Transaction = deserialize(&hex_tx).unwrap();
 
-        assert_eq!(format!("{:x}", tx.bitcoin_hash()), "d6ac4a5e61657c4c604dcde855a1db74ec6b3e54f32695d72c5e11c7761ea1b4");
-        assert_eq!(format!("{:x}", tx.txid()), "9652aa62b0e748caeec40c4cb7bc17c6792435cc3dfe447dd1ca24f912a1c6ec");
+        assert_eq!(tx.bitcoin_hash().be_hex_string(), "d6ac4a5e61657c4c604dcde855a1db74ec6b3e54f32695d72c5e11c7761ea1b4");
+        assert_eq!(tx.txid().be_hex_string(), "9652aa62b0e748caeec40c4cb7bc17c6792435cc3dfe447dd1ca24f912a1c6ec");
         assert_eq!(tx.get_weight(), 2718);
 
         // non-segwit tx from my mempool
@@ -757,8 +755,8 @@ mod tests {
         ).unwrap();
         let tx: Transaction = deserialize(&hex_tx).unwrap();
 
-        assert_eq!(format!("{:x}", tx.bitcoin_hash()), "971ed48a62c143bbd9c87f4bafa2ef213cfa106c6e140f111931d0be307468dd");
-        assert_eq!(format!("{:x}", tx.txid()), "971ed48a62c143bbd9c87f4bafa2ef213cfa106c6e140f111931d0be307468dd");
+        assert_eq!(tx.bitcoin_hash().be_hex_string(), "971ed48a62c143bbd9c87f4bafa2ef213cfa106c6e140f111931d0be307468dd");
+        assert_eq!(tx.txid().be_hex_string(), "971ed48a62c143bbd9c87f4bafa2ef213cfa106c6e140f111931d0be307468dd");
     }
 
     #[test]
@@ -777,7 +775,7 @@ mod tests {
         let script = Script::from(hex_bytes(script).unwrap());
         let mut raw_expected = hex_bytes(expected_result).unwrap();
         raw_expected.reverse();
-        let expected_result = sha256d::Hash::from_slice(&raw_expected[..]).unwrap();
+        let expected_result = Sha256dHash::from(&raw_expected[..]);
 
         let actual_result = tx.signature_hash(input_index, &script, hash_type as u32);
         assert_eq!(actual_result, expected_result);
