@@ -24,7 +24,7 @@ use std::default::Default;
 use blockdata::opcodes;
 use blockdata::script;
 use blockdata::transaction::{OutPoint, Transaction, TxOut, TxIn};
-use blockdata::block::{GenesisBlock, BlockHeader};
+use blockdata::block::{GenesisBlock, GenesisHeader};
 use network::constants::Network;
 use util::misc::hex_bytes;
 use util::hash::MerkleRoot;
@@ -95,7 +95,7 @@ pub fn genesis_block(network: Network) -> GenesisBlock {
         Network::Bitcoin => {
             let txdata = vec![bitcoin_genesis_tx()];
             GenesisBlock {
-                header: BlockHeader {
+                header: GenesisHeader {
                     version: 1,
                     prev_blockhash: Default::default(),
                     merkle_root: txdata.merkle_root(),
@@ -109,7 +109,7 @@ pub fn genesis_block(network: Network) -> GenesisBlock {
         Network::Testnet => {
             let txdata = vec![bitcoin_genesis_tx()];
             GenesisBlock {
-                header: BlockHeader {
+                header: GenesisHeader {
                     version: 1,
                     prev_blockhash: Default::default(),
                     merkle_root: txdata.merkle_root(),
@@ -123,7 +123,7 @@ pub fn genesis_block(network: Network) -> GenesisBlock {
         Network::Regtest => {
             let txdata = vec![bitcoin_genesis_tx()];
             GenesisBlock {
-                header: BlockHeader {
+                header: GenesisHeader {
                     version: 1,
                     prev_blockhash: Default::default(),
                     merkle_root: txdata.merkle_root(),
