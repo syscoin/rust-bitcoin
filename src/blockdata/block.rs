@@ -94,9 +94,9 @@ pub struct LoneBlockHeader {
     /// when the LoneBlockHeader is returned as part of a `headers` message.
     pub tx_count: VarInt
 }
-/// A genesis header
+/// A legacy header without auxpow
 #[derive(PartialEq, Eq, Clone, Debug)]
-pub struct GenesisHeader {
+pub struct BaseHeader {
     /// The protocol version. Should always be 1.
     pub version: u32,
     /// Reference to the previous block in the chain
@@ -111,11 +111,11 @@ pub struct GenesisHeader {
     /// The nonce, selected to obtain a low enough blockhash
     pub nonce: u32
 }
-/// A genesis block
+/// A legacy block without auxpow
 #[derive(PartialEq, Eq, Clone, Debug)]
-pub struct GenesisBlock {
-    /// The genesis block header
-    pub header: GenesisHeader,
+pub struct BaseBlock {
+    /// The legacy block header
+    pub header: BaseHeader,
     /// List of transactions contained in the block
     pub txdata: Vec<Transaction>
 }
@@ -190,14 +190,13 @@ impl BlockHeader {
         ret
     }
 }
-
 impl BitcoinHash for BlockHeader {
     fn bitcoin_hash(&self) -> Sha256dHash {
         use consensus::encode::serialize;
         Sha256dHash::from_data(&serialize(self))
     }
 }
-impl BitcoinHash for GenesisHeader {
+impl BitcoinHash for BaseHeader {
     fn bitcoin_hash(&self) -> Sha256dHash {
         use consensus::encode::serialize;
         Sha256dHash::from_data(&serialize(self))
@@ -211,8 +210,8 @@ impl BitcoinHash for Block {
 
 impl_consensus_encoding!(BlockHeader, version, prev_blockhash, merkle_root, time, bits, nonce, coinbase_txn, block_hash, coinbase_branch_hashes, coinbase_branch_side_mask, blockchain_branch_hashes, blockchain_branch_side_mask, parent_version, parent_prev_blockhash, parent_merkle_root, parent_time, parent_bits, parent_nonce);
 impl_consensus_encoding!(Block, header, txdata);
-impl_consensus_encoding!(GenesisHeader, version, prev_blockhash, merkle_root, time, bits, nonce);
-impl_consensus_encoding!(GenesisBlock, header, txdata);
+impl_consensus_encoding!(BaseHeader, version, prev_blockhash, merkle_root, time, bits, nonce);
+impl_consensus_encoding!(BaseBlock, header, txdata);
 
 impl_consensus_encoding!(LoneBlockHeader, header, tx_count);
 
@@ -254,6 +253,7 @@ mod tests {
         let header: BlockHeader = deserialize(&some_header).expect("Can't deserialize correct block header");
 
         assert_eq!(header.bits, BlockHeader::compact_target_from_u256(&header.target()));
+
     }
 }
 
