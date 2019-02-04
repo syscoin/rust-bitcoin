@@ -191,10 +191,15 @@ impl BlockHeader {
         ret
     }
 }
+impl From<&BlockHeader> for BaseHeader {
+    fn from(item: &BlockHeader) -> Self {
+        BaseHeader { version: item.version, prev_blockhash: item.prev_blockhash, merkle_root: item.merkle_root, time: item.time, bits: item.bits, nonce: item.nonce  }
+    }
+}
 impl BitcoinHash for BlockHeader {
     fn bitcoin_hash(&self) -> Sha256dHash {
-        use consensus::encode::serialize;
-        Sha256dHash::from_data(&serialize(self))
+        let base_header = BaseHeader::from(self);
+        base_header.bitcoin_hash()
     }
 }
 impl BitcoinHash for BaseHeader {
@@ -205,14 +210,12 @@ impl BitcoinHash for BaseHeader {
 }
 impl BitcoinHash for Block {
     fn bitcoin_hash(&self) -> Sha256dHash {
-        self.header.bitcoin_hash()
+        let base_header = BaseHeader::from(&self.header);
+        base_header.bitcoin_hash()
     }
 }
-impl From<&BlockHeader> for BaseHeader {
-    fn from(item: &BlockHeader) -> Self {
-        BaseHeader { version: item.version, prev_blockhash: item.prev_blockhash, merkle_root: item.merkle_root, time: item.time, bits: item.bits, nonce: item.nonce  }
-    }
-}
+
+
 impl_consensus_encoding!(BlockHeader, version, prev_blockhash, merkle_root, time, bits, nonce, coinbase_txn, block_hash, coinbase_branch_hashes, coinbase_branch_side_mask, blockchain_branch_hashes, blockchain_branch_side_mask, parent_version, parent_prev_blockhash, parent_merkle_root, parent_time, parent_bits, parent_nonce);
 impl_consensus_encoding!(Block, header, txdata);
 impl_consensus_encoding!(BaseHeader, version, prev_blockhash, merkle_root, time, bits, nonce);
