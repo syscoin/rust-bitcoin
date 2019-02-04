@@ -1,13 +1,13 @@
 [package]
 name = "bitcoin"
-version = "0.16.0"
-authors = ["Andrew Poelstra <apoelstra@wpsoftware.net>"]
+version = "4.16.0"
+authors = ["Andrew Poelstra <apoelstra@wpsoftware.net>, Jagdeep Sidhu <jsidhu@blockchainfoundry.co>"]
 license = "CC0-1.0"
 homepage = "https://github.com/rust-bitcoin/rust-bitcoin/"
 repository = "https://github.com/rust-bitcoin/rust-bitcoin/"
 documentation = "https://docs.rs/bitcoin/"
-description = "General purpose library for using and interoperating with Bitcoin and other cryptocurrencies."
-keywords = [ "crypto", "bitcoin" ]
+description = "General purpose library for using and interoperating with Bitcoin/Syscoin and other cryptocurrencies with AUXPOW support."
+keywords = [ "crypto", "bitcoin", "syscoin" ]
 readme = "README.md"
 
 [lib]
