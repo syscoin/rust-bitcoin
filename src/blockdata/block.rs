@@ -214,6 +214,11 @@ impl BitcoinHash for Block {
         base_header.bitcoin_hash()
     }
 }
+impl BitcoinHash for BaseBlock {
+    fn bitcoin_hash(&self) -> Sha256dHash {
+        self.header.bitcoin_hash()
+    }
+}
 
 
 impl_consensus_encoding!(BlockHeader, version, prev_blockhash, merkle_root, time, bits, nonce, coinbase_txn, block_hash, coinbase_branch_hashes, coinbase_branch_side_mask, blockchain_branch_hashes, blockchain_branch_side_mask, parent_version, parent_prev_blockhash, parent_merkle_root, parent_time, parent_bits, parent_nonce);
