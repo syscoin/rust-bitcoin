@@ -41,7 +41,7 @@
 #![deny(unused_mut)]
 #![deny(missing_docs)]
 
-extern crate bitcoin_bech32;
+extern crate syscoin_bech32;
 extern crate byteorder;
 extern crate crypto;
 extern crate hex;

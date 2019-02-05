@@ -12,7 +12,7 @@
 
 [package]
 name = "syscoin"
-version = "0.16.9"
+version = "0.16.10"
 authors = ["Jagdeep Sidhu <jsidhu@blockchainfoundry.co>"]
 license = "CC0-1.0"
 homepage = "https://github.com/sidhujag/rust-bitcoin/"
@@ -25,8 +25,8 @@ readme = "README.md"
 [lib]
 name = "bitcoin"
 path = "src/lib.rs"
-[dependencies.bitcoin-bech32]
-version = "0.8.0"
+[dependencies.syscoin-bech32]
+version = "0.8.4"
 
 [dependencies.bitcoinconsensus]
 version = "0.16"

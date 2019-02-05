@@ -50,7 +50,7 @@
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
-use bitcoin_bech32::{self, WitnessProgram, u5};
+use syscoin_bech32::{self, WitnessProgram, u5};
 use secp256k1::key::PublicKey;
 
 #[cfg(feature = "serde")]
@@ -198,11 +198,11 @@ impl Address {
 
     #[inline]
     /// convert Network to bech32 network (this should go away soon)
-    fn bech_network (network: Network) -> bitcoin_bech32::constants::Network {
+    fn bech_network (network: Network) -> syscoin_bech32::constants::Network {
         match network {
-            Network::Bitcoin => bitcoin_bech32::constants::Network::Bitcoin,
-            Network::Testnet => bitcoin_bech32::constants::Network::Testnet,
-            Network::Regtest => bitcoin_bech32::constants::Network::Regtest,
+            Network::Bitcoin => syscoin_bech32::constants::Network::Syscoin,
+            Network::Testnet => syscoin_bech32::constants::Network::SyscoinTestnet,
+            Network::Regtest => syscoin_bech32::constants::Network::Regtest,
         }
     }
 
@@ -287,9 +287,9 @@ impl FromStr for Address {
         {
             let witprog = WitnessProgram::from_address(s)?;
             let network = match witprog.network() {
-                bitcoin_bech32::constants::Network::Bitcoin => Network::Bitcoin,
-                bitcoin_bech32::constants::Network::Testnet => Network::Testnet,
-                bitcoin_bech32::constants::Network::Regtest => Network::Regtest,
+                syscoin_bech32::constants::Network::Syscoin => Network::Bitcoin,
+                syscoin_bech32::constants::Network::SyscoinTestnet => Network::Testnet,
+                syscoin_bech32::constants::Network::Regtest => Network::Regtest,
                 _ => panic!("unknown network")
             };
             if witprog.version().to_u8() != 0 {
@@ -476,7 +476,7 @@ mod tests {
         // stolen from Bitcoin transaction: b3c8c2b6cfc335abbcb2c7823a8453f55d64b2b5125a9a61e8737230cdb8ce20
         let key = hex_key!("033bc8c83c52df5712229a2f72206d90192366c36428cb0c12b6af98324d97bfbc");
         let addr = Address::p2wpkh(&key, Bitcoin);
-        assert_eq!(&addr.to_string(), "bc1qvzvkjn4q3nszqxrv3nraga2r822xjty3ykvkuw");
+        assert_eq!(&addr.to_string(), "sc1qvzvkjn4q3nszqxrv3nraga2r822xjty398xhuq");
     }
 
 
@@ -485,16 +485,14 @@ mod tests {
         // stolen from Bitcoin transaction 5df912fda4becb1c29e928bec8d64d93e9ba8efa9b5b405bd683c86fd2c65667
         let script = hex_script!("52210375e00eb72e29da82b89367947f29ef34afb75e8654f6ea368e0acdfd92976b7c2103a1b26313f430c4b15bb1fdce663207659d8cac749a0e53d70eff01874496feff2103c96d495bfdd5ba4145e3e046fee45e84a8a48ad05bd8dbb395c011a32cf9f88053ae");
         let addr = Address::p2wsh(&script, Bitcoin);
-        assert_eq!(&addr.to_string(), "bc1qwqdg6squsna38e46795at95yu9atm8azzmyvckulcc7kytlcckxswvvzej");
+        assert_eq!(&addr.to_string(), "sc1qwqdg6squsna38e46795at95yu9atm8azzmyvckulcc7kytlcckxslfwnwn");
     }
 
 
     #[test]
     fn test_bip173_vectors() {
-        let addrstr = "SC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KV8F3T4";
-        let addr = Address::from_str(addrstr).unwrap();
-        assert_eq!(addr.network, Bitcoin);
-        assert_eq!(addr.script_pubkey(), hex_script!("0014751e76e8199196d454941c45d1b3a323f1433bd6"));
+        let addrstr = "BC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KV8F3T4";
+        assert!(Address::from_str(addrstr).is_err());
         // skip round-trip because we'll serialize to lowercase which won't match
 
         let addrstr = "ts1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7";

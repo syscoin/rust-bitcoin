@@ -42,7 +42,7 @@ use std::io::{Cursor, Read, Write};
 use byteorder::{LittleEndian, WriteBytesExt, ReadBytesExt};
 use hex::encode as hex_encode;
 
-use bitcoin_bech32;
+use syscoin_bech32;
 
 use util::base58;
 
@@ -54,7 +54,7 @@ pub enum Error {
     /// Base58 encoding error
     Base58(base58::Error),
     /// Bech32 encoding error
-    Bech32(bitcoin_bech32::Error),
+    Bech32(syscoin_bech32::Error),
     /// Error from the `byteorder` crate
     ByteOrder(io::Error),
     /// Network magic was not expected
@@ -158,8 +158,8 @@ impl From<base58::Error> for Error {
 }
 
 #[doc(hidden)]
-impl From<bitcoin_bech32::Error> for Error {
-    fn from(e: bitcoin_bech32::Error) -> Error {
+impl From<syscoin_bech32::Error> for Error {
+    fn from(e: syscoin_bech32::Error) -> Error {
         Error::Bech32(e)
     }
 }
