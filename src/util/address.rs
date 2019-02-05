@@ -245,8 +245,8 @@ impl Display for Address {
                 let hash = &Hash160::from_data(&pk.serialize_uncompressed()[..]);
                 let mut prefixed = [0; 21];
                 prefixed[0] = match self.network {
-                    Network::Bitcoin => 0,
-                    Network::Testnet | Network::Regtest => 111,
+                    Network::Bitcoin => 63,
+                    Network::Testnet | Network::Regtest => 65,
                 };
                 prefixed[1..].copy_from_slice(&hash[..]);
                 base58::check_encode_slice_to_fmt(fmt, &prefixed[..])
@@ -254,8 +254,8 @@ impl Display for Address {
             Payload::PubkeyHash(ref hash) => {
                 let mut prefixed = [0; 21];
                 prefixed[0] = match self.network {
-                    Network::Bitcoin => 0,
-                    Network::Testnet | Network::Regtest => 111,
+                    Network::Bitcoin => 63,
+                    Network::Testnet | Network::Regtest => 65,
                 };
                 prefixed[1..].copy_from_slice(&hash[..]);
                 base58::check_encode_slice_to_fmt(fmt, &prefixed[..])
@@ -281,9 +281,9 @@ impl FromStr for Address {
 
     fn from_str(s: &str) -> Result<Address, encode::Error> {
         // bech32 (note that upper or lowercase is allowed but NOT mixed case)
-        if s.starts_with("bc1") || s.starts_with("BC1") ||
-           s.starts_with("tb1") || s.starts_with("TB1") ||
-           s.starts_with("bcrt1") || s.starts_with("BCRT1")
+        if s.starts_with("sc1") || s.starts_with("SC1") ||
+           s.starts_with("ts1") || s.starts_with("TS1") ||
+           s.starts_with("scrt1") || s.starts_with("SCRT1")
         {
             let witprog = WitnessProgram::from_address(s)?;
             let network = match witprog.network() {
@@ -313,7 +313,7 @@ impl FromStr for Address {
         }
 
         let (network, payload) = match data[0] {
-            0 => (
+            63 => (
                 Network::Bitcoin,
                 Payload::PubkeyHash(Hash160::from(&data[1..]))
             ),
@@ -321,7 +321,7 @@ impl FromStr for Address {
                 Network::Bitcoin,
                 Payload::ScriptHash(Hash160::from(&data[1..]))
             ),
-            111 => (
+            65 => (
                 Network::Testnet,
                 Payload::PubkeyHash(Hash160::from(&data[1..]))
             ),
@@ -425,19 +425,19 @@ mod tests {
         };
 
         assert_eq!(addr.script_pubkey(), hex_script!("76a914162c5ea71c0b23f5b9022ef047c4a86470a5b07088ac"));
-        assert_eq!(&addr.to_string(), "132F25rTsvBdp9JzLLBHP5mvGY66i1xdiM");
-        assert_eq!(Address::from_str("132F25rTsvBdp9JzLLBHP5mvGY66i1xdiM").unwrap(), addr);
+        assert_eq!(&addr.to_string(), "SPKF3vdccHNqLT6SsmAMvyvUvKKXVSLKkX");
+        assert_eq!(Address::from_str("SPKF3vdccHNqLT6SsmAMvyvUvKKXVSLKkX").unwrap(), addr);
     }
 
     #[test]
     fn test_p2pkh_from_key() {
         let key = hex_key!("048d5141948c1702e8c95f438815794b87f706a8d4cd2bffad1dc1570971032c9b6042a0431ded2478b5c9cf2d81c124a5e57347a3c63ef0e7716cf54d613ba183");
         let addr = Address::p2upkh(&key, Bitcoin);
-        assert_eq!(&addr.to_string(), "1QJVDzdqb1VpbDK7uDeyVXy9mR27CJiyhY");
+        assert_eq!(&addr.to_string(), "SkbVFqQzKNh27X6aSee43S7iRCFXy2pLxu");
 
         let key = hex_key!(&"03df154ebfcf29d29cc10d5c2565018bce2d9edbab267c31d2caf44a63056cf99f");
         let addr = Address::p2pkh(&key, Testnet);
-        assert_eq!(&addr.to_string(), "mqkhEMH6NCeYjFybv7pvFC22MFeaNT9AQC");
+        assert_eq!(&addr.to_string(), "TLCwwMZqhuLF7KZcnpWFwRVqQ3oBbbyudz");
     }
 
     #[test]
@@ -445,7 +445,7 @@ mod tests {
         // one of Satoshi's coins, from Bitcoin transaction 9b0fc92260312ce44e74ef369f5c66bbb85848f2eddd5a7a1cde251e54ccfdd5
         let key = hex_key!("047211a824f55b505228e4c3d5194c1fcfaa15a456abdf37f9b9d97a4040afc073dee6c89064984f03385237d92167c13e236446b417ab79a0fcae412ae3316b77");
         let addr = Address::p2pk(&key, Bitcoin);
-        assert_eq!(&addr.to_string(), "1HLoD9E4SDFFPDiYfNYnkBLQ85Y51J3Zb1");
+        assert_eq!(&addr.to_string(), "SddoEz1DAaSSuXW1CoXsJ5UxmrmVmqisVf");
     }
 
     #[test]
@@ -491,59 +491,59 @@ mod tests {
 
     #[test]
     fn test_bip173_vectors() {
-        let addrstr = "BC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KV8F3T4";
+        let addrstr = "SC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KV8F3T4";
         let addr = Address::from_str(addrstr).unwrap();
         assert_eq!(addr.network, Bitcoin);
         assert_eq!(addr.script_pubkey(), hex_script!("0014751e76e8199196d454941c45d1b3a323f1433bd6"));
         // skip round-trip because we'll serialize to lowercase which won't match
 
-        let addrstr = "tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7";
+        let addrstr = "ts1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7";
         let addr = Address::from_str(addrstr).unwrap();
         assert_eq!(addr.network, Testnet);
         assert_eq!(addr.script_pubkey(), hex_script!("00201863143c14c5166804bd19203356da136c985678cd4d27a1b8c6329604903262"));
         assert_eq!(addr.to_string(), addrstr);
 
-        let addrstr = "tb1qqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsesrxh6hy";
+        let addrstr = "ts1qqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsesrxh6hy";
         let addr = Address::from_str(addrstr).unwrap();
         assert_eq!(addr.network, Testnet);
         assert_eq!(addr.script_pubkey(), hex_script!("0020000000c4a5cad46221b2a187905e5266362b99d5e91c6ce24d165dab93e86433"));
         assert_eq!(addr.to_string(), addrstr);
 
-        let addrstr = "bcrt1q2nfxmhd4n3c8834pj72xagvyr9gl57n5r94fsl";
+        let addrstr = "scrt1q2nfxmhd4n3c8834pj72xagvyr9gl57n5r94fsl";
         let addr = Address::from_str(addrstr).unwrap();
         assert_eq!(addr.network, Regtest);
         assert_eq!(addr.script_pubkey(), hex_script!("001454d26dddb59c7073c6a197946ea1841951fa7a74"));
         assert_eq!(addr.to_string(), addrstr);
 
         // bad vectors
-        let addrstr = "tc1qw508d6qejxtdg4y5r3zarvary0c5xw7kg3g4ty"; // invalid hrp
+        let addrstr = "sc1qw508d6qejxtdg4y5r3zarvary0c5xw7kg3g4ty"; // invalid hrp
         assert!(Address::from_str(addrstr).is_err());
 
-        let addrstr = "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t5"; // invalid checksum
+        let addrstr = "sc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t5"; // invalid checksum
         assert!(Address::from_str(addrstr).is_err());
 
-        let addrstr = "BC13W508D6QEJXTDG4Y5R3ZARVARY0C5XW7KN40WF2"; // invalid witness version
+        let addrstr = "SC13W508D6QEJXTDG4Y5R3ZARVARY0C5XW7KN40WF2"; // invalid witness version
         assert!(Address::from_str(addrstr).is_err());
 
-        let addrstr = "bc1rw5uspcuh"; // invalid program length
+        let addrstr = "sc1rw5uspcuh"; // invalid program length
         assert!(Address::from_str(addrstr).is_err());
 
-        let addrstr = "bc10w508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7kw5rljs90"; // invalid program length
+        let addrstr = "sc10w508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7kw5rljs90"; // invalid program length
         assert!(Address::from_str(addrstr).is_err());
 
-        let addrstr = "BC1QR508D6QEJXTDG4Y5R3ZARVARYV98GJ9P"; // invalid program length for wit v0
+        let addrstr = "SC1QR508D6QEJXTDG4Y5R3ZARVARYV98GJ9P"; // invalid program length for wit v0
         assert!(Address::from_str(addrstr).is_err());
 
-        let addrstr = "tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sL5k7"; // mixed case
+        let addrstr = "ts1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sL5k7"; // mixed case
         assert!(Address::from_str(addrstr).is_err());
 
-        let addrstr = "bc1zw508d6qejxtdg4y5r3zarvaryvqyzf3du"; // zero padding of more than 4 bits
+        let addrstr = "sc1zw508d6qejxtdg4y5r3zarvaryvqyzf3du"; // zero padding of more than 4 bits
         assert!(Address::from_str(addrstr).is_err());
 
-        let addrstr = "tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3pjxtptv"; // nonzero padding
+        let addrstr = "ts1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3pjxtptv"; // nonzero padding
         assert!(Address::from_str(addrstr).is_err());
 
-        let addrstr = "bc1gmk9yu"; // empty data section
+        let addrstr = "sc1gmk9yu"; // empty data section
         assert!(Address::from_str(addrstr).is_err());
     }
 
@@ -572,9 +572,9 @@ mod tests {
             hex_script!("a914162c5ea71c0b23f5b9022ef047c4a86470a5b07087")
         );
 
-        let addr = Address::from_str("tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7").unwrap();
+        let addr = Address::from_str("ts1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7").unwrap();
         let json = Json::from_serialize(&addr).unwrap();
-        assert_eq!(json.string(), Some("tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7"));
+        assert_eq!(json.string(), Some("ts1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7"));
         let into: Address = json.into_deserialize().unwrap();
         assert_eq!(addr.to_string(), into.to_string());
         assert_eq!(
@@ -582,9 +582,9 @@ mod tests {
             hex_script!("00201863143c14c5166804bd19203356da136c985678cd4d27a1b8c6329604903262")
         );
 
-        let addr = Address::from_str("bcrt1q2nfxmhd4n3c8834pj72xagvyr9gl57n5r94fsl").unwrap();
+        let addr = Address::from_str("scrt1q2nfxmhd4n3c8834pj72xagvyr9gl57n5r94fsl").unwrap();
         let json = Json::from_serialize(&addr).unwrap();
-        assert_eq!(json.string(), Some("bcrt1q2nfxmhd4n3c8834pj72xagvyr9gl57n5r94fsl"));
+        assert_eq!(json.string(), Some("scrt1q2nfxmhd4n3c8834pj72xagvyr9gl57n5r94fsl"));
         let into: Address = json.into_deserialize().unwrap();
         assert_eq!(addr.to_string(), into.to_string());
         assert_eq!(

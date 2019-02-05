@@ -183,7 +183,7 @@ mod tests {
 
         let secp = Secp256k1::new();
         let pk = sk.to_legacy_address(&secp);
-        assert_eq!(&pk.to_string(), "mqwpxxvfv3QbM8PU8uBx2jaNt9btQqvQNx");
+        assert_eq!(&pk.to_string(), "TLQ5fyDRFk6HjByV1bsHiy4BvwkVj1Vt3C");
 
         // test string conversion
         assert_eq!(&sk.to_string(), "cVt4o7BGAig1UXywgGSmARhxMdzP5qvQsxKkSsc1XEkw3tDTQFpy");
@@ -199,6 +199,6 @@ mod tests {
 
         let secp = Secp256k1::new();
         let pk = sk.to_legacy_address(&secp);
-        assert_eq!(&pk.to_string(), "1GhQvF6dL8xa6wBxLnWmHcQsurx9RxiMc8");
+        assert_eq!(&pk.to_string(), "SczQx5sn4W9mdEyQtDVqqWZSZeBaGANBkQ");
     }
 }
