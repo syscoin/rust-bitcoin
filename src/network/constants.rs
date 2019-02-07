@@ -54,7 +54,7 @@ user_enum! {
         /// Classic Bitcoin
         Bitcoin <-> "syscoin",
         /// Bitcoin's testnet
-        Testnet <-> "testnet",
+        Testnet <-> "syscointestnet",
         /// Bitcoin's regtest
         Regtest <-> "regtest"
     }
@@ -144,11 +144,11 @@ mod tests {
   #[test]
   fn string_test() {
       assert_eq!(Network::Bitcoin.to_string(), "syscoin");
-      assert_eq!(Network::Testnet.to_string(), "testnet");
+      assert_eq!(Network::Testnet.to_string(), "syscointestnet");
       assert_eq!(Network::Regtest.to_string(), "regtest");
 
       assert_eq!("syscoin".parse::<Network>().unwrap(), Network::Bitcoin);
-      assert_eq!("testnet".parse::<Network>().unwrap(), Network::Testnet);
+      assert_eq!("syscointestnet".parse::<Network>().unwrap(), Network::Testnet);
       assert_eq!("regtest".parse::<Network>().unwrap(), Network::Regtest);
       assert!("fakenet".parse::<Network>().is_err());
   }
