@@ -467,9 +467,9 @@ mod tests {
     fn test_json_serialize() {
         use strason::Json;
 
-        let addr = Address::from_str("132F25rTsvBdp9JzLLBHP5mvGY66i1xdiM").unwrap();
+        let addr = Address::from_str("SPKF3vdccHNqLT6SsmAMvyvUvKKXVSLKkX").unwrap();
         let json = Json::from_serialize(&addr).unwrap();
-        assert_eq!(json.string(), Some("132F25rTsvBdp9JzLLBHP5mvGY66i1xdiM"));
+        assert_eq!(json.string(), Some("SPKF3vdccHNqLT6SsmAMvyvUvKKXVSLKkX"));
         let into: Address = json.into_deserialize().unwrap();
         assert_eq!(addr.to_string(), into.to_string());
         assert_eq!(
@@ -477,14 +477,14 @@ mod tests {
             hex_script!("76a914162c5ea71c0b23f5b9022ef047c4a86470a5b07088ac")
         );
 
-        let addr = Address::from_str("33iFwdLuRpW1uK1RTRqsoi8rR4NpDzk66k").unwrap();
+        let addr = Address::from_str("SkbVFqQzKNh27X6aSee43S7iRCFXy2pLxu").unwrap();
         let json = Json::from_serialize(&addr).unwrap();
-        assert_eq!(json.string(), Some("33iFwdLuRpW1uK1RTRqsoi8rR4NpDzk66k"));
+        assert_eq!(json.string(), Some("SkbVFqQzKNh27X6aSee43S7iRCFXy2pLxu"));
         let into: Address = json.into_deserialize().unwrap();
         assert_eq!(addr.to_string(), into.to_string());
         assert_eq!(
             into.script_pubkey(),
-            hex_script!("a914162c5ea71c0b23f5b9022ef047c4a86470a5b07087")
+            hex_script!("76a914ff99864ce1a887e00c9c8615210d6267edd7d7a588ac")
         );
 
         let addr =
