@@ -203,7 +203,7 @@ impl BlockHeader {
         ret
     }
 }
-impl From<&BlockHeader> for BaseHeader {
+impl<'a> From<&'a BlockHeader> for BaseHeader {
     fn from(item: &BlockHeader) -> Self {
         BaseHeader {
             version: item.version,
