@@ -23,9 +23,9 @@ use consensus::encode;
 #[inline]
 fn hex_val(c: u8) -> Result<u8, encode::Error> {
     let res = match c {
-        b'0' ... b'9' => c - '0' as u8,
-        b'a' ... b'f' => c - 'a' as u8 + 10,
-        b'A' ... b'F' => c - 'A' as u8 + 10,
+        b'0'...b'9' => c - '0' as u8,
+        b'a'...b'f' => c - 'a' as u8 + 10,
+        b'A'...b'F' => c - 'A' as u8 + 10,
         _ => return Err(encode::Error::UnexpectedHexDigit(c as char)),
     };
     Ok(res)
@@ -60,7 +60,7 @@ pub fn hex_bytes(data: &str) -> Result<Vec<u8>, encode::Error> {
         };
 
         // Convert bytes representing characters to their represented value and combine lsn and msn.
-        // The and_then and map are crucial for performance, in comparision to using ? and then
+        // The and_then and map are crucial for performance, in comparison to using ? and then
         // using the results of that for the calculation it's nearly twice as fast. Using bit
         // shifting and or instead of multiply and add on the other hand doesn't show a significant
         // increase in performance.
@@ -76,8 +76,12 @@ pub fn hex_bytes(data: &str) -> Result<Vec<u8>, encode::Error> {
 /// instance of it, returning the number of instances removed.
 /// Loops through the vector opcode by opcode, skipping pushed data.
 pub fn script_find_and_remove(haystack: &mut Vec<u8>, needle: &[u8]) -> usize {
-    if needle.len() > haystack.len() { return 0; }
-    if needle.len() == 0 { return 0; }
+    if needle.len() > haystack.len() {
+        return 0;
+    }
+    if needle.len() == 0 {
+        return 0;
+    }
 
     let mut top = haystack.len() - needle.len();
     let mut n_deleted = 0;
@@ -92,14 +96,16 @@ pub fn script_find_and_remove(haystack: &mut Vec<u8>, needle: &[u8]) -> usize {
             // This is ugly but prevents infinite loop in case of overflow
             let overflow = top < needle.len();
             top = top.wrapping_sub(needle.len());
-            if overflow { break; }
+            if overflow {
+                break;
+            }
         } else {
             i += match opcodes::All::from((*haystack)[i]).classify() {
                 opcodes::Class::PushBytes(n) => n as usize + 1,
                 opcodes::Class::Ordinary(opcodes::Ordinary::OP_PUSHDATA1) => 2,
                 opcodes::Class::Ordinary(opcodes::Ordinary::OP_PUSHDATA2) => 3,
                 opcodes::Class::Ordinary(opcodes::Ordinary::OP_PUSHDATA4) => 5,
-                _ => 1
+                _ => 1,
             };
         }
     }
@@ -107,13 +113,13 @@ pub fn script_find_and_remove(haystack: &mut Vec<u8>, needle: &[u8]) -> usize {
     n_deleted
 }
 
-#[cfg(all(test, feature="unstable"))]
+#[cfg(all(test, feature = "unstable"))]
 mod benches {
-    use rand::{Rng, thread_rng};
     use super::hex_bytes;
+    use rand::{thread_rng, Rng};
     use test::Bencher;
 
-    fn join<I: Iterator<Item=IT>, IT: AsRef<str>>(iter: I, expected_len: usize) -> String {
+    fn join<I: Iterator<Item = IT>, IT: AsRef<str>>(iter: I, expected_len: usize) -> String {
         let mut res = String::with_capacity(expected_len);
         for s in iter {
             res.push_str(s.as_ref());
@@ -122,17 +128,15 @@ mod benches {
     }
 
     fn bench_from_hex(b: &mut Bencher, data_size: usize) {
-        let data_bytes = thread_rng()
-            .gen_iter()
-            .take(data_size)
-            .collect::<Vec<u8>>();
-        let data = join(data_bytes.iter().map(|x| format!("{:02x}", x)), data_size * 2);
+        let data_bytes = thread_rng().gen_iter().take(data_size).collect::<Vec<u8>>();
+        let data = join(
+            data_bytes.iter().map(|x| format!("{:02x}", x)),
+            data_size * 2,
+        );
 
         assert_eq!(hex_bytes(&data).unwrap(), data_bytes);
 
-        b.iter(move || {
-            hex_bytes(&data).unwrap()
-        })
+        b.iter(|| hex_bytes(&data).unwrap())
     }
 
     #[bench]
@@ -158,19 +162,27 @@ mod benches {
 
 #[cfg(test)]
 mod tests {
-    use super::script_find_and_remove;
     use super::hex_bytes;
+    use super::script_find_and_remove;
 
     #[test]
     fn test_script_find_and_remove() {
-        let mut v = vec![101u8, 102, 103, 104, 102, 103, 104, 102, 103, 104, 105, 106, 107, 108, 109];
+        let mut v = vec![
+            101u8, 102, 103, 104, 102, 103, 104, 102, 103, 104, 105, 106, 107, 108, 109,
+        ];
 
         assert_eq!(script_find_and_remove(&mut v, &[]), 0);
         assert_eq!(script_find_and_remove(&mut v, &[105, 105, 105]), 0);
-        assert_eq!(v, vec![101, 102, 103, 104, 102, 103, 104, 102, 103, 104, 105, 106, 107, 108, 109]);
+        assert_eq!(
+            v,
+            vec![101, 102, 103, 104, 102, 103, 104, 102, 103, 104, 105, 106, 107, 108, 109]
+        );
 
         assert_eq!(script_find_and_remove(&mut v, &[105, 106, 107]), 1);
-        assert_eq!(v, vec![101, 102, 103, 104, 102, 103, 104, 102, 103, 104, 108, 109]);
+        assert_eq!(
+            v,
+            vec![101, 102, 103, 104, 102, 103, 104, 102, 103, 104, 108, 109]
+        );
 
         assert_eq!(script_find_and_remove(&mut v, &[104, 108, 109]), 1);
         assert_eq!(v, vec![101, 102, 103, 104, 102, 103, 104, 102, 103]);
@@ -195,9 +207,22 @@ mod tests {
 
     #[test]
     fn test_script_codesep_remove() {
-        let mut s = vec![33u8, 3, 132, 121, 160, 250, 153, 140, 211, 82, 89, 162, 239, 10, 122, 92, 104, 102, 44, 20, 116, 248, 140, 203, 109, 8, 167, 103, 123, 190, 199, 242, 32, 65, 173, 171, 33, 3, 132, 121, 160, 250, 153, 140, 211, 82, 89, 162, 239, 10, 122, 92, 104, 102, 44, 20, 116, 248, 140, 203, 109, 8, 167, 103, 123, 190, 199, 242, 32, 65, 173, 171, 81];
+        let mut s = vec![
+            33u8, 3, 132, 121, 160, 250, 153, 140, 211, 82, 89, 162, 239, 10, 122, 92, 104, 102,
+            44, 20, 116, 248, 140, 203, 109, 8, 167, 103, 123, 190, 199, 242, 32, 65, 173, 171, 33,
+            3, 132, 121, 160, 250, 153, 140, 211, 82, 89, 162, 239, 10, 122, 92, 104, 102, 44, 20,
+            116, 248, 140, 203, 109, 8, 167, 103, 123, 190, 199, 242, 32, 65, 173, 171, 81,
+        ];
         assert_eq!(script_find_and_remove(&mut s, &[171]), 2);
-        assert_eq!(s, vec![33, 3, 132, 121, 160, 250, 153, 140, 211, 82, 89, 162, 239, 10, 122, 92, 104, 102, 44, 20, 116, 248, 140, 203, 109, 8, 167, 103, 123, 190, 199, 242, 32, 65, 173, 33, 3, 132, 121, 160, 250, 153, 140, 211, 82, 89, 162, 239, 10, 122, 92, 104, 102, 44, 20, 116, 248, 140, 203, 109, 8, 167, 103, 123, 190, 199, 242, 32, 65, 173, 81]);
+        assert_eq!(
+            s,
+            vec![
+                33, 3, 132, 121, 160, 250, 153, 140, 211, 82, 89, 162, 239, 10, 122, 92, 104, 102,
+                44, 20, 116, 248, 140, 203, 109, 8, 167, 103, 123, 190, 199, 242, 32, 65, 173, 33,
+                3, 132, 121, 160, 250, 153, 140, 211, 82, 89, 162, 239, 10, 122, 92, 104, 102, 44,
+                20, 116, 248, 140, 203, 109, 8, 167, 103, 123, 190, 199, 242, 32, 65, 173, 81
+            ]
+        );
     }
 
     #[test]
@@ -208,4 +233,3 @@ mod tests {
         assert!(hex_bytes("aBcD4eFL").is_err());
     }
 }
-

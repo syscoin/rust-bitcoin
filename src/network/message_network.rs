@@ -40,12 +40,12 @@ pub struct VersionMessage {
     pub nonce: u64,
     /// A string describing the peer's software
     pub user_agent: String,
-    /// The height of the maxmimum-work blockchain that the peer is aware of
+    /// The height of the maximum-work blockchain that the peer is aware of
     pub start_height: i32,
     /// Whether the receiving peer should relay messages to the sender; used
     /// if the sender is bandwidth-limited and would like to support bloom
     /// filtering. Defaults to true.
-    pub relay: bool
+    pub relay: bool,
 }
 
 impl VersionMessage {
@@ -74,9 +74,18 @@ impl VersionMessage {
     }
 }
 
-impl_consensus_encoding!(VersionMessage, version, services, timestamp,
-                         receiver, sender, nonce,
-                         user_agent, start_height, relay);
+impl_consensus_encoding!(
+    VersionMessage,
+    version,
+    services,
+    timestamp,
+    receiver,
+    sender,
+    nonce,
+    user_agent,
+    start_height,
+    relay
+);
 
 #[cfg(test)]
 mod tests {

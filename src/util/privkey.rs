@@ -16,13 +16,13 @@
 //! A private key represents the secret data associated with its proposed use
 //!
 
-use std::fmt::{self, Write};
-use std::str::FromStr;
-use secp256k1::{self, Secp256k1};
-use secp256k1::key::{PublicKey, SecretKey};
-use util::address::Address;
 use consensus::encode;
 use network::constants::Network;
+use secp256k1::key::{PublicKey, SecretKey};
+use secp256k1::{self, Secp256k1};
+use std::fmt::{self, Write};
+use std::str::FromStr;
+use util::address::Address;
 use util::base58;
 
 #[derive(Clone, PartialEq, Eq)]
@@ -33,7 +33,7 @@ pub struct Privkey {
     /// The network on which this key should be used
     pub network: Network,
     /// The actual ECDSA key
-    pub key: SecretKey
+    pub key: SecretKey,
 }
 
 impl Privkey {
@@ -63,8 +63,7 @@ impl Privkey {
     pub fn to_legacy_address<C: secp256k1::Signing>(&self, secp: &Secp256k1<C>) -> Address {
         if self.compressed {
             Address::p2pkh(&self.public_key(secp), self.network)
-        }
-        else {
+        } else {
             Address::p2upkh(&self.public_key(secp), self.network)
         }
     }
@@ -126,13 +125,21 @@ impl Privkey {
         let compressed = match data.len() {
             33 => false,
             34 => true,
-            _ => { return Err(encode::Error::Base58(base58::Error::InvalidLength(data.len()))); }
+            _ => {
+                return Err(encode::Error::Base58(base58::Error::InvalidLength(
+                    data.len(),
+                )));
+            }
         };
 
         let network = match data[0] {
             128 => Network::Bitcoin,
             239 => Network::Testnet,
-            x   => { return Err(encode::Error::Base58(base58::Error::InvalidVersion(vec![x]))); }
+            x => {
+                return Err(encode::Error::Base58(base58::Error::InvalidVersion(vec![
+                    x,
+                ])));
+            }
         };
 
         let key = SecretKey::from_slice(&data[1..33])
@@ -141,7 +148,7 @@ impl Privkey {
         Ok(Privkey {
             compressed: compressed,
             network: network,
-            key: key
+            key: key,
         })
     }
 }
@@ -168,10 +175,10 @@ impl FromStr for Privkey {
 #[cfg(test)]
 mod tests {
     use super::Privkey;
+    use network::constants::Network::Bitcoin;
+    use network::constants::Network::Testnet;
     use secp256k1::Secp256k1;
     use std::str::FromStr;
-    use network::constants::Network::Testnet;
-    use network::constants::Network::Bitcoin;
 
     #[test]
     fn test_key_derivation() {
@@ -179,14 +186,20 @@ mod tests {
         let sk = Privkey::from_wif("cVt4o7BGAig1UXywgGSmARhxMdzP5qvQsxKkSsc1XEkw3tDTQFpy").unwrap();
         assert_eq!(sk.network(), Testnet);
         assert_eq!(sk.is_compressed(), true);
-        assert_eq!(&sk.to_wif(), "cVt4o7BGAig1UXywgGSmARhxMdzP5qvQsxKkSsc1XEkw3tDTQFpy");
+        assert_eq!(
+            &sk.to_wif(),
+            "cVt4o7BGAig1UXywgGSmARhxMdzP5qvQsxKkSsc1XEkw3tDTQFpy"
+        );
 
         let secp = Secp256k1::new();
         let pk = sk.to_legacy_address(&secp);
         assert_eq!(&pk.to_string(), "TLQ5fyDRFk6HjByV1bsHiy4BvwkVj1Vt3C");
 
         // test string conversion
-        assert_eq!(&sk.to_string(), "cVt4o7BGAig1UXywgGSmARhxMdzP5qvQsxKkSsc1XEkw3tDTQFpy");
+        assert_eq!(
+            &sk.to_string(),
+            "cVt4o7BGAig1UXywgGSmARhxMdzP5qvQsxKkSsc1XEkw3tDTQFpy"
+        );
         let sk_str =
             Privkey::from_str("cVt4o7BGAig1UXywgGSmARhxMdzP5qvQsxKkSsc1XEkw3tDTQFpy").unwrap();
         assert_eq!(&sk.to_wif(), &sk_str.to_wif());
@@ -195,7 +208,10 @@ mod tests {
         let sk = Privkey::from_wif("5JYkZjmN7PVMjJUfJWfRFwtuXTGB439XV6faajeHPAM9Z2PT2R3").unwrap();
         assert_eq!(sk.network(), Bitcoin);
         assert_eq!(sk.is_compressed(), false);
-        assert_eq!(&sk.to_wif(), "5JYkZjmN7PVMjJUfJWfRFwtuXTGB439XV6faajeHPAM9Z2PT2R3");
+        assert_eq!(
+            &sk.to_wif(),
+            "5JYkZjmN7PVMjJUfJWfRFwtuXTGB439XV6faajeHPAM9Z2PT2R3"
+        );
 
         let secp = Secp256k1::new();
         let pk = sk.to_legacy_address(&secp);

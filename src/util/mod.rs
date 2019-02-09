@@ -16,23 +16,23 @@
 //!
 //! Functions needed by all parts of the Bitcoin library
 
-pub mod privkey;
 pub mod address;
 pub mod base58;
-pub mod bip32;
 pub mod bip143;
+pub mod bip32;
 pub mod contracthash;
 pub mod decimal;
 pub mod hash;
 pub mod misc;
+pub mod privkey;
 pub mod uint;
 
 use std::{error, fmt};
 
 use secp256k1;
 
-use network;
 use consensus::encode;
+use network;
 
 /// A trait which allows numbers to act as fixed-size bit arrays
 pub trait BitArray {
@@ -51,7 +51,7 @@ pub trait BitArray {
     /// Create all-zeros value
     fn zero() -> Self;
 
-    /// Create value represeting one
+    /// Create value representing one
     fn one() -> Self;
 }
 
@@ -77,7 +77,9 @@ impl fmt::Display for Error {
             Error::Secp256k1(ref e) => fmt::Display::fmt(e, f),
             Error::Encode(ref e) => fmt::Display::fmt(e, f),
             Error::Network(ref e) => fmt::Display::fmt(e, f),
-            Error::SpvBadProofOfWork | Error::SpvBadTarget => f.write_str(error::Error::description(self)),
+            Error::SpvBadProofOfWork | Error::SpvBadTarget => {
+                f.write_str(error::Error::description(self))
+            }
         }
     }
 }
@@ -88,7 +90,7 @@ impl error::Error for Error {
             Error::Secp256k1(ref e) => Some(e),
             Error::Encode(ref e) => Some(e),
             Error::Network(ref e) => Some(e),
-            Error::SpvBadProofOfWork | Error::SpvBadTarget => None
+            Error::SpvBadProofOfWork | Error::SpvBadTarget => None,
         }
     }
 

@@ -18,10 +18,10 @@
 //! Bitcoin data (blocks and transactions) around.
 //!
 
-use network::constants;
-use consensus::encode::{Decodable, Encodable};
+use bitcoin_hashes::sha256d;
 use consensus::encode::{self, Decoder, Encoder};
-use util::hash::Sha256dHash;
+use consensus::encode::{Decodable, Encodable};
+use network::constants;
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 /// The type of an inventory object
@@ -35,7 +35,7 @@ pub enum InvType {
     /// Witness Block
     WitnessBlock,
     /// Witness Transaction
-    WitnessTransaction
+    WitnessTransaction,
 }
 
 // Some simple messages
@@ -48,9 +48,9 @@ pub struct GetBlocksMessage {
     /// Locator hashes --- ordered newest to oldest. The remote peer will
     /// reply with its longest known chain, starting from a locator hash
     /// if possible and block 1 otherwise.
-    pub locator_hashes: Vec<Sha256dHash>,
+    pub locator_hashes: Vec<sha256d::Hash>,
     /// References the block to stop at, or zero to just fetch the maximum 500 blocks
-    pub stop_hash: Sha256dHash
+    pub stop_hash: sha256d::Hash,
 }
 
 /// The `getheaders` message
@@ -61,9 +61,9 @@ pub struct GetHeadersMessage {
     /// Locator hashes --- ordered newest to oldest. The remote peer will
     /// reply with its longest known chain, starting from a locator hash
     /// if possible and block 1 otherwise.
-    pub locator_hashes: Vec<Sha256dHash>,
+    pub locator_hashes: Vec<sha256d::Hash>,
     /// References the header to stop at, or zero to just fetch the maximum 2000 headers
-    pub stop_hash: Sha256dHash
+    pub stop_hash: sha256d::Hash,
 }
 
 /// An inventory object --- a reference to a Bitcoin object
@@ -72,16 +72,16 @@ pub struct Inventory {
     /// The type of object that is referenced
     pub inv_type: InvType,
     /// The object's hash
-    pub hash: Sha256dHash
+    pub hash: sha256d::Hash,
 }
 
 impl GetBlocksMessage {
     /// Construct a new `getblocks` message
-    pub fn new(locator_hashes: Vec<Sha256dHash>, stop_hash: Sha256dHash) -> GetBlocksMessage {
+    pub fn new(locator_hashes: Vec<sha256d::Hash>, stop_hash: sha256d::Hash) -> GetBlocksMessage {
         GetBlocksMessage {
             version: constants::PROTOCOL_VERSION,
             locator_hashes: locator_hashes.clone(),
-            stop_hash: stop_hash
+            stop_hash: stop_hash,
         }
     }
 }
@@ -90,11 +90,11 @@ impl_consensus_encoding!(GetBlocksMessage, version, locator_hashes, stop_hash);
 
 impl GetHeadersMessage {
     /// Construct a new `getheaders` message
-    pub fn new(locator_hashes: Vec<Sha256dHash>, stop_hash: Sha256dHash) -> GetHeadersMessage {
+    pub fn new(locator_hashes: Vec<sha256d::Hash>, stop_hash: sha256d::Hash) -> GetHeadersMessage {
         GetHeadersMessage {
             version: constants::PROTOCOL_VERSION,
             locator_hashes: locator_hashes,
-            stop_hash: stop_hash
+            stop_hash: stop_hash,
         }
     }
 }
@@ -105,12 +105,13 @@ impl<S: Encoder> Encodable<S> for Inventory {
     #[inline]
     fn consensus_encode(&self, s: &mut S) -> Result<(), encode::Error> {
         match self.inv_type {
-            InvType::Error => 0u32, 
+            InvType::Error => 0u32,
             InvType::Transaction => 1,
             InvType::Block => 2,
             InvType::WitnessBlock => 0x40000002,
-            InvType::WitnessTransaction => 0x40000001
-        }.consensus_encode(s)?;
+            InvType::WitnessTransaction => 0x40000001,
+        }
+        .consensus_encode(s)?;
         self.hash.consensus_encode(s)
     }
 }
@@ -125,16 +126,16 @@ impl<D: Decoder> Decodable<D> for Inventory {
                 1 => InvType::Transaction,
                 2 => InvType::Block,
                 // TODO do not fail here
-                _ => { panic!("bad inventory type field") }
+                _ => panic!("bad inventory type field"),
             },
-            hash: Decodable::consensus_decode(d)?
+            hash: Decodable::consensus_decode(d)?,
         })
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{GetHeadersMessage, GetBlocksMessage};
+    use super::{GetBlocksMessage, GetHeadersMessage};
 
     use hex::decode as hex_decode;
 
@@ -144,7 +145,8 @@ mod tests {
     #[test]
     fn getblocks_message_test() {
         let from_sat = hex_decode("72110100014a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b0000000000000000000000000000000000000000000000000000000000000000").unwrap();
-        let genhash = hex_decode("4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b").unwrap();
+        let genhash =
+            hex_decode("4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b").unwrap();
 
         let decode: Result<GetBlocksMessage, _> = deserialize(&from_sat);
         assert!(decode.is_ok());
@@ -160,7 +162,8 @@ mod tests {
     #[test]
     fn getheaders_message_test() {
         let from_sat = hex_decode("72110100014a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b0000000000000000000000000000000000000000000000000000000000000000").unwrap();
-        let genhash = hex_decode("4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b").unwrap();
+        let genhash =
+            hex_decode("4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b").unwrap();
 
         let decode: Result<GetHeadersMessage, _> = deserialize(&from_sat);
         assert!(decode.is_ok());
@@ -173,4 +176,3 @@ mod tests {
         assert_eq!(serialize(&real_decode), from_sat);
     }
 }
-

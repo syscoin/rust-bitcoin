@@ -12,27 +12,23 @@
 // If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //
 
-//! Pay-to-contract-hash supporte
+//! Pay-to-contract-hash support
 //!
 //! See Appendix A of the Blockstream sidechains whitepaper
 //! at http://blockstream.com/sidechains.pdf for details of
 //! what this does.
 
-use secp256k1::{self, Secp256k1};
-use secp256k1::key::{PublicKey, SecretKey};
+use bitcoin_hashes::{hash160, sha256, Hash, HashEngine, Hmac, HmacEngine};
 use blockdata::{opcodes, script};
-use crypto::hmac;
-use crypto::mac::Mac;
+use secp256k1::key::{PublicKey, SecretKey};
+use secp256k1::{self, Secp256k1};
 
 use std::{error, fmt};
 
 use network::constants::Network;
-use util::{address, hash};
+use util::address;
 
-#[cfg(feature="fuzztarget")]      use fuzz_util::sha2;
-#[cfg(not(feature="fuzztarget"))] use crypto::sha2;
-
-/// Encoding of "pubkey here" in script; from bitcoin core `src/script/script.h`
+/// Encoding of "pubkey here" in script; from Bitcoin Core `src/script/script.h`
 static PUBKEY: u8 = 0xFE;
 
 /// A contract-hash error
@@ -57,20 +53,21 @@ pub enum Error {
     /// Did not have enough keys to instantiate a script template
     TooFewKeys(usize),
     /// Had too many keys; template does not match key list
-    TooManyKeys(usize)
+    TooManyKeys(usize),
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Error::BadTweak(ref e) |
-            Error::Secp(ref e) => fmt::Display::fmt(&e, f),
+            Error::BadTweak(ref e) | Error::Secp(ref e) => fmt::Display::fmt(&e, f),
             Error::Script(ref e) => fmt::Display::fmt(&e, f),
             Error::UncompressedKey => f.write_str("encountered uncompressed secp public key"),
             Error::ExpectedKey => f.write_str("expected key when deserializing script"),
-            Error::ExpectedChecksig => f.write_str("expected OP_*CHECKSIG* when deserializing script"),
+            Error::ExpectedChecksig => {
+                f.write_str("expected OP_*CHECKSIG* when deserializing script")
+            }
             Error::TooFewKeys(n) => write!(f, "got {} keys, which was not enough", n),
-            Error::TooManyKeys(n) => write!(f, "got {} keys, which was too many", n)
+            Error::TooManyKeys(n) => write!(f, "got {} keys, which was too many", n),
         }
     }
 }
@@ -78,10 +75,9 @@ impl fmt::Display for Error {
 impl error::Error for Error {
     fn cause(&self) -> Option<&error::Error> {
         match *self {
-            Error::BadTweak(ref e) |
-            Error::Secp(ref e) => Some(e),
+            Error::BadTweak(ref e) | Error::Secp(ref e) => Some(e),
             Error::Script(ref e) => Some(e),
-            _ => None
+            _ => None,
         }
     }
 
@@ -94,7 +90,7 @@ impl error::Error for Error {
             Error::ExpectedKey => "expected key when deserializing script",
             Error::ExpectedChecksig => "expected OP_*CHECKSIG* when deserializing script",
             Error::TooFewKeys(_) => "too few keys for template",
-            Error::TooManyKeys(_) => "too many keys for template"
+            Error::TooManyKeys(_) => "too many keys for template",
         }
     }
 }
@@ -103,7 +99,7 @@ impl error::Error for Error {
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 enum TemplateElement {
     Op(opcodes::All),
-    Key
+    Key,
 }
 
 /// A script template
@@ -136,7 +132,10 @@ impl Template {
 
     /// Returns the number of keys this template requires to instantiate
     pub fn required_keys(&self) -> usize {
-        self.0.iter().filter(|e| **e == TemplateElement::Key).count()
+        self.0
+            .iter()
+            .filter(|e| **e == TemplateElement::Key)
+            .count()
     }
 
     /// If the first push in the template is a number, return this number. For the
@@ -159,26 +158,35 @@ impl Template {
 
 impl<'a> From<&'a [u8]> for Template {
     fn from(slice: &'a [u8]) -> Template {
-        Template(slice.iter().map(|&byte| {
-            if byte == PUBKEY {
-                TemplateElement::Key
-            } else {
-                TemplateElement::Op(opcodes::All::from(byte))
-            }
-        }).collect())
+        Template(
+            slice
+                .iter()
+                .map(|&byte| {
+                    if byte == PUBKEY {
+                        TemplateElement::Key
+                    } else {
+                        TemplateElement::Op(opcodes::All::from(byte))
+                    }
+                })
+                .collect(),
+        )
     }
 }
 
 /// Tweak keys using some arbitrary data
-pub fn tweak_keys<C: secp256k1::Verification>(secp: &Secp256k1<C>, keys: &[PublicKey], contract: &[u8]) -> Result<Vec<PublicKey>, Error> {
+pub fn tweak_keys<C: secp256k1::Verification>(
+    secp: &Secp256k1<C>,
+    keys: &[PublicKey],
+    contract: &[u8],
+) -> Result<Vec<PublicKey>, Error> {
     let mut ret = Vec::with_capacity(keys.len());
     for mut key in keys.iter().cloned() {
-        let mut hmac_raw = [0; 32];
-        let mut hmac = hmac::Hmac::new(sha2::Sha256::new(), &key.serialize());
-        hmac.input(contract);
-        hmac.raw_result(&mut hmac_raw);
-        let hmac_sk = SecretKey::from_slice(&hmac_raw).map_err(Error::BadTweak)?;
-        key.add_exp_assign(secp, &hmac_sk[..]).map_err(Error::Secp)?;
+        let mut hmac_engine: HmacEngine<sha256::Hash> = HmacEngine::new(&key.serialize());
+        hmac_engine.input(contract);
+        let hmac_result: Hmac<sha256::Hash> = Hmac::from_engine(hmac_engine);
+        let hmac_sk = SecretKey::from_slice(&hmac_result[..]).map_err(Error::BadTweak)?;
+        key.add_exp_assign(secp, &hmac_sk[..])
+            .map_err(Error::Secp)?;
         ret.push(key);
     }
     Ok(ret)
@@ -186,15 +194,18 @@ pub fn tweak_keys<C: secp256k1::Verification>(secp: &Secp256k1<C>, keys: &[Publi
 
 /// Compute a tweak from some given data for the given public key
 pub fn compute_tweak(pk: &PublicKey, contract: &[u8]) -> Result<SecretKey, Error> {
-    let mut hmac_raw = [0; 32];
-    let mut hmac = hmac::Hmac::new(sha2::Sha256::new(), &pk.serialize());
-    hmac.input(contract);
-    hmac.raw_result(&mut hmac_raw);
-    SecretKey::from_slice(&hmac_raw).map_err(Error::BadTweak)
+    let mut hmac_engine: HmacEngine<sha256::Hash> = HmacEngine::new(&pk.serialize());
+    hmac_engine.input(contract);
+    let hmac_result: Hmac<sha256::Hash> = Hmac::from_engine(hmac_engine);
+    SecretKey::from_slice(&hmac_result[..]).map_err(Error::BadTweak)
 }
 
 /// Tweak a secret key using some arbitrary data (calls `compute_tweak` internally)
-pub fn tweak_secret_key<C: secp256k1::Signing>(secp: &Secp256k1<C>, key: &SecretKey, contract: &[u8]) -> Result<SecretKey, Error> {
+pub fn tweak_secret_key<C: secp256k1::Signing>(
+    secp: &Secp256k1<C>,
+    key: &SecretKey,
+    contract: &[u8],
+) -> Result<SecretKey, Error> {
     // Compute public key
     let pk = PublicKey::from_secret_key(secp, &key);
     // Compute tweak
@@ -207,19 +218,18 @@ pub fn tweak_secret_key<C: secp256k1::Signing>(secp: &Secp256k1<C>, key: &Secret
 }
 
 /// Takes a contract, template and key set and runs through all the steps
-pub fn create_address<C: secp256k1::Verification>(secp: &Secp256k1<C>,
-                      network: Network,
-                      contract: &[u8],
-                      keys: &[PublicKey],
-                      template: &Template)
-                      -> Result<address::Address, Error> {
+pub fn create_address<C: secp256k1::Verification>(
+    secp: &Secp256k1<C>,
+    network: Network,
+    contract: &[u8],
+    keys: &[PublicKey],
+    template: &Template,
+) -> Result<address::Address, Error> {
     let keys = tweak_keys(secp, keys, contract)?;
     let script = template.to_script(&keys)?;
     Ok(address::Address {
         network: network,
-        payload: address::Payload::ScriptHash(
-            hash::Hash160::from_data(&script[..])
-        )
+        payload: address::Payload::ScriptHash(hash160::Hash::hash(&script[..])),
     })
 }
 
@@ -232,7 +242,7 @@ pub fn untemplate(script: &script::Script) -> Result<(Template, Vec<PublicKey>),
     enum Mode {
         SeekingKeys,
         CopyingKeys,
-        SeekingCheckMulti
+        SeekingCheckMulti,
     }
 
     let mut mode = Mode::SeekingKeys;
@@ -242,8 +252,12 @@ pub fn untemplate(script: &script::Script) -> Result<(Template, Vec<PublicKey>),
                 let n = data.len();
                 ret = match PublicKey::from_slice(data) {
                     Ok(key) => {
-                        if n == 65 { return Err(Error::UncompressedKey); }
-                        if mode == Mode::SeekingCheckMulti { return Err(Error::ExpectedChecksig); }
+                        if n == 65 {
+                            return Err(Error::UncompressedKey);
+                        }
+                        if mode == Mode::SeekingCheckMulti {
+                            return Err(Error::ExpectedChecksig);
+                        }
                         retkeys.push(key);
                         mode = Mode::CopyingKeys;
                         ret.push_opcode(opcodes::All::from(PUBKEY))
@@ -252,9 +266,13 @@ pub fn untemplate(script: &script::Script) -> Result<(Template, Vec<PublicKey>),
                         // Arbitrary pushes are only allowed before we've found any keys.
                         // Otherwise we have to wait for a N CHECKSIG pair.
                         match mode {
-                            Mode::SeekingKeys => { ret.push_slice(data) }
-                            Mode::CopyingKeys => { return Err(Error::ExpectedKey); },
-                            Mode::SeekingCheckMulti => { return Err(Error::ExpectedChecksig); }
+                            Mode::SeekingKeys => ret.push_slice(data),
+                            Mode::CopyingKeys => {
+                                return Err(Error::ExpectedKey);
+                            }
+                            Mode::SeekingCheckMulti => {
+                                return Err(Error::ExpectedChecksig);
+                            }
                         }
                     }
                 }
@@ -262,29 +280,41 @@ pub fn untemplate(script: &script::Script) -> Result<(Template, Vec<PublicKey>),
             script::Instruction::Op(op) => {
                 match op.classify() {
                     // CHECKSIG should only come after a list of keys
-                    opcodes::Class::Ordinary(opcodes::Ordinary::OP_CHECKSIG) |
-                    opcodes::Class::Ordinary(opcodes::Ordinary::OP_CHECKSIGVERIFY) => {
-                        if mode == Mode::SeekingKeys { return Err(Error::ExpectedKey); }
+                    opcodes::Class::Ordinary(opcodes::Ordinary::OP_CHECKSIG)
+                    | opcodes::Class::Ordinary(opcodes::Ordinary::OP_CHECKSIGVERIFY) => {
+                        if mode == Mode::SeekingKeys {
+                            return Err(Error::ExpectedKey);
+                        }
                         mode = Mode::SeekingKeys;
                     }
                     // CHECKMULTISIG should only come after a number
-                    opcodes::Class::Ordinary(opcodes::Ordinary::OP_CHECKMULTISIG) |
-                    opcodes::Class::Ordinary(opcodes::Ordinary::OP_CHECKMULTISIGVERIFY) => {
-                        if mode == Mode::SeekingKeys { return Err(Error::ExpectedKey); }
-                        if mode == Mode::CopyingKeys { return Err(Error::ExpectedKey); }
+                    opcodes::Class::Ordinary(opcodes::Ordinary::OP_CHECKMULTISIG)
+                    | opcodes::Class::Ordinary(opcodes::Ordinary::OP_CHECKMULTISIGVERIFY) => {
+                        if mode == Mode::SeekingKeys {
+                            return Err(Error::ExpectedKey);
+                        }
+                        if mode == Mode::CopyingKeys {
+                            return Err(Error::ExpectedKey);
+                        }
                         mode = Mode::SeekingKeys;
                     }
                     // Numbers after keys mean we expect a CHECKMULTISIG.
                     opcodes::Class::PushNum(_) => {
-                        if mode == Mode::SeekingCheckMulti { return Err(Error::ExpectedChecksig); }
-                        if mode == Mode::CopyingKeys { mode = Mode::SeekingCheckMulti; }
+                        if mode == Mode::SeekingCheckMulti {
+                            return Err(Error::ExpectedChecksig);
+                        }
+                        if mode == Mode::CopyingKeys {
+                            mode = Mode::SeekingCheckMulti;
+                        }
                     }
                     // All other opcodes do nothing
                     _ => {}
                 }
                 ret = ret.push_opcode(op);
             }
-            script::Instruction::Error(e) => { return Err(Error::Script(e)); }
+            script::Instruction::Error(e) => {
+                return Err(Error::Script(e));
+            }
         }
     }
     Ok((Template::from(&ret[..]), retkeys))
@@ -292,10 +322,10 @@ pub fn untemplate(script: &script::Script) -> Result<(Template, Vec<PublicKey>),
 
 #[cfg(test)]
 mod tests {
-    use secp256k1::Secp256k1;
-    use secp256k1::key::PublicKey;
     use hex::decode as hex_decode;
     use rand::thread_rng;
+    use secp256k1::key::PublicKey;
+    use secp256k1::Secp256k1;
 
     use blockdata::script::Script;
     use network::constants::Network;
@@ -320,10 +350,16 @@ mod tests {
         let secp = Secp256k1::new();
         let keys = alpha_keys!();
         // This is the first withdraw ever, in alpha a94f95cc47b444c10449c0eed51d895e4970560c4a1a9d15d46124858abc3afe
-        let contract = hex!("5032534894ffbf32c1f1c0d3089b27c98fd991d5d7329ebd7d711223e2cde5a9417a1fa3e852c576");
+        let contract = hex!(
+            "5032534894ffbf32c1f1c0d3089b27c98fd991d5d7329ebd7d711223e2cde5a9417a1fa3e852c576"
+        );
 
-        let addr = create_address(&secp, Network::Testnet, &contract, keys, &alpha_template!()).unwrap();
-        assert_eq!(addr.to_string(), "2N3zXjbwdTcPsJiy8sUK9FhWJhqQCxA8Jjr".to_owned());
+        let addr =
+            create_address(&secp, Network::Testnet, &contract, keys, &alpha_template!()).unwrap();
+        assert_eq!(
+            addr.to_string(),
+            "2N3zXjbwdTcPsJiy8sUK9FhWJhqQCxA8Jjr".to_owned()
+        );
     }
 
     #[test]
@@ -351,9 +387,18 @@ mod tests {
         // Directly compute tweaks on pubkeys
         let tweaked_pks = tweak_keys(&secp, &pks, &contract[..]).unwrap();
         // Compute tweaks on secret keys
-        let tweaked_pk1 = PublicKey::from_secret_key(&secp, &tweak_secret_key(&secp, &sk1, &contract[..]).unwrap());
-        let tweaked_pk2 = PublicKey::from_secret_key(&secp, &tweak_secret_key(&secp, &sk2, &contract[..]).unwrap());
-        let tweaked_pk3 = PublicKey::from_secret_key(&secp, &tweak_secret_key(&secp, &sk3, &contract[..]).unwrap());
+        let tweaked_pk1 = PublicKey::from_secret_key(
+            &secp,
+            &tweak_secret_key(&secp, &sk1, &contract[..]).unwrap(),
+        );
+        let tweaked_pk2 = PublicKey::from_secret_key(
+            &secp,
+            &tweak_secret_key(&secp, &sk2, &contract[..]).unwrap(),
+        );
+        let tweaked_pk3 = PublicKey::from_secret_key(
+            &secp,
+            &tweak_secret_key(&secp, &sk3, &contract[..]).unwrap(),
+        );
         // Check equality
         assert_eq!(tweaked_pks[0], tweaked_pk1);
         assert_eq!(tweaked_pks[1], tweaked_pk2);
@@ -370,10 +415,14 @@ mod tests {
         assert_eq!(template_short.required_keys(), 6);
         assert_eq!(template_long.required_keys(), 8);
         assert_eq!(template.required_keys(), 7);
-        assert_eq!(template_short.to_script(alpha_keys), Err(Error::TooManyKeys(7)));
-        assert_eq!(template_long.to_script(alpha_keys), Err(Error::TooFewKeys(7)));
+        assert_eq!(
+            template_short.to_script(alpha_keys),
+            Err(Error::TooManyKeys(7))
+        );
+        assert_eq!(
+            template_long.to_script(alpha_keys),
+            Err(Error::TooFewKeys(7))
+        );
         assert!(template.to_script(alpha_keys).is_ok());
     }
 }
-
-

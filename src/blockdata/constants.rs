@@ -21,13 +21,13 @@
 
 use std::default::Default;
 
+use blockdata::block::{BaseBlock, BaseHeader};
 use blockdata::opcodes;
 use blockdata::script;
-use blockdata::transaction::{OutPoint, Transaction, TxOut, TxIn};
-use blockdata::block::{BaseBlock, BaseHeader};
+use blockdata::transaction::{OutPoint, Transaction, TxIn, TxOut};
 use network::constants::Network;
-use util::misc::hex_bytes;
 use util::hash::MerkleRoot;
+use util::misc::hex_bytes;
 use util::uint::Uint256;
 
 /// The maximum allowable sequence number
@@ -64,10 +64,11 @@ fn bitcoin_genesis_tx() -> Transaction {
     };
 
     // Inputs
-    let in_script = script::Builder::new().push_scriptint(486604799)
-                                          .push_scriptint(4)
-                                          .push_slice(b"The Times 03/Jan/2009 Chancellor on brink of second bailout for banks")
-                                          .into_script();
+    let in_script = script::Builder::new()
+        .push_scriptint(486604799)
+        .push_scriptint(4)
+        .push_slice(b"The Times 03/Jan/2009 Chancellor on brink of second bailout for banks")
+        .into_script();
     ret.input.push(TxIn {
         previous_output: OutPoint::null(),
         script_sig: in_script,
@@ -82,7 +83,7 @@ fn bitcoin_genesis_tx() -> Transaction {
         .into_script();
     ret.output.push(TxOut {
         value: 50 * COIN_VALUE,
-        script_pubkey: out_script
+        script_pubkey: out_script,
     });
 
     // end
@@ -101,9 +102,9 @@ pub fn genesis_block(network: Network) -> BaseBlock {
                     merkle_root: txdata.merkle_root(),
                     time: 1549246364,
                     bits: 0x1e0ffff0,
-                    nonce: 204673
+                    nonce: 204673,
                 },
-                txdata: txdata
+                txdata: txdata,
             }
         }
         Network::Testnet => {
@@ -115,9 +116,9 @@ pub fn genesis_block(network: Network) -> BaseBlock {
                     merkle_root: txdata.merkle_root(),
                     time: 1544509441,
                     bits: 0x1e0ffff0,
-                    nonce: 167093
+                    nonce: 167093,
                 },
-                txdata: txdata
+                txdata: txdata,
             }
         }
         Network::Regtest => {
@@ -129,9 +130,9 @@ pub fn genesis_block(network: Network) -> BaseBlock {
                     merkle_root: txdata.merkle_root(),
                     time: 1544509441,
                     bits: 0x207fffff,
-                    nonce: 1
+                    nonce: 1,
                 },
-                txdata: txdata
+                txdata: txdata,
             }
         }
     }
@@ -139,13 +140,13 @@ pub fn genesis_block(network: Network) -> BaseBlock {
 
 #[cfg(test)]
 mod test {
-    use std::default::Default;
     use hex::decode as hex_decode;
+    use std::default::Default;
 
-    use network::constants::Network;
+    use blockdata::constants::{bitcoin_genesis_tx, genesis_block};
+    use blockdata::constants::{COIN_VALUE, MAX_SEQUENCE};
     use consensus::encode::serialize;
-    use blockdata::constants::{genesis_block, bitcoin_genesis_tx};
-    use blockdata::constants::{MAX_SEQUENCE, COIN_VALUE};
+    use network::constants::Network;
     use util::hash::BitcoinHash;
 
     #[test]
@@ -166,8 +167,10 @@ mod test {
         assert_eq!(gen.output[0].value, 50 * COIN_VALUE);
         assert_eq!(gen.lock_time, 0);
 
-        assert_eq!(gen.bitcoin_hash().be_hex_string(),
-                   "4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b".to_string());
+        assert_eq!(
+            format!("{:x}", gen.bitcoin_hash()),
+            "4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b".to_string()
+        );
     }
 
     #[test]
@@ -176,13 +179,17 @@ mod test {
 
         assert_eq!(gen.header.version, 1);
         assert_eq!(gen.header.prev_blockhash, Default::default());
-        assert_eq!(gen.header.merkle_root.be_hex_string(),
-                   "4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b".to_string());
+        assert_eq!(
+            format!("{:x}", gen.header.merkle_root),
+            "4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b".to_string()
+        );
         assert_eq!(gen.header.time, 1549246364);
         assert_eq!(gen.header.bits, 0x1e0ffff0);
         assert_eq!(gen.header.nonce, 204673);
-        assert_eq!(gen.header.bitcoin_hash().be_hex_string(),
-                   "0000052c0f76a21b6313429a74fbc75a409833b6e501ab7c09c463db32adab41".to_string());
+        assert_eq!(
+            format!("{:x}", gen.header.bitcoin_hash()),
+            "0000052c0f76a21b6313429a74fbc75a409833b6e501ab7c09c463db32adab41".to_string()
+        );
     }
 
     #[test]
@@ -190,13 +197,16 @@ mod test {
         let gen = genesis_block(Network::Testnet);
         assert_eq!(gen.header.version, 1);
         assert_eq!(gen.header.prev_blockhash, Default::default());
-        assert_eq!(gen.header.merkle_root.be_hex_string(),
-                  "4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b".to_string());
+        assert_eq!(
+            format!("{:x}", gen.header.merkle_root),
+            "4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b".to_string()
+        );
         assert_eq!(gen.header.time, 1544509441);
         assert_eq!(gen.header.bits, 0x1e0ffff0);
         assert_eq!(gen.header.nonce, 167093);
-        assert_eq!(gen.header.bitcoin_hash().be_hex_string(),
-                   "00000199b49877c0e552f25462a80ef421fd2a15c7f5978683adc2b6b5c5ea02".to_string());
+        assert_eq!(
+            format!("{:x}", gen.header.bitcoin_hash()),
+            "00000199b49877c0e552f25462a80ef421fd2a15c7f5978683adc2b6b5c5ea02".to_string()
+        );
     }
 }
-

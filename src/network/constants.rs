@@ -37,8 +37,8 @@
 //! assert_eq!(&bytes[..], &[0xCE, 0xE2, 0xCA, 0xFF]);
 //! ```
 
+use consensus::encode::{self, Decoder, Encoder};
 use consensus::encode::{Decodable, Encodable};
-use consensus::encode::{self, Encoder, Decoder};
 
 /// Version of the protocol as appearing in network message headers
 pub const PROTOCOL_VERSION: u32 = 70400;
@@ -77,7 +77,7 @@ impl Network {
             0xFFCAE2CE => Some(Network::Bitcoin),
             0xFECAE2CE => Some(Network::Testnet),
             0xDAB5BFFA => Some(Network::Regtest),
-            _ => None
+            _ => None,
         }
     }
 
@@ -115,42 +115,50 @@ impl<D: Decoder> Decodable<D> for Network {
     #[inline]
     fn consensus_decode(d: &mut D) -> Result<Network, encode::Error> {
         u32::consensus_decode(d)
-            .and_then(|m| {
-                Network::from_magic(m)
-                    .ok_or(encode::Error::UnknownNetworkMagic(m))
-            })
+            .and_then(|m| Network::from_magic(m).ok_or(encode::Error::UnknownNetworkMagic(m)))
     }
 }
 
 #[cfg(test)]
 mod tests {
-  use super::Network;
-  use consensus::encode::{deserialize, serialize};
+    use super::Network;
+    use consensus::encode::{deserialize, serialize};
 
-  #[test]
-  fn serialize_test() {
-    assert_eq!(serialize(&Network::Bitcoin), vec![0xce, 0xe2, 0xca, 0xff]);
-    assert_eq!(serialize(&Network::Testnet), vec![0xce, 0xe2, 0xca, 0xfe]);
-    assert_eq!(serialize(&Network::Regtest), vec![0xfa, 0xbf, 0xb5, 0xda]);
+    #[test]
+    fn serialize_test() {
+        assert_eq!(serialize(&Network::Bitcoin), vec![0xce, 0xe2, 0xca, 0xff]);
+        assert_eq!(serialize(&Network::Testnet), vec![0xce, 0xe2, 0xca, 0xfe]);
+        assert_eq!(serialize(&Network::Regtest), vec![0xfa, 0xbf, 0xb5, 0xda]);
 
-    assert_eq!(deserialize(&[0xce, 0xe2, 0xca, 0xff]).ok(), Some(Network::Bitcoin));
-    assert_eq!(deserialize(&[0xce, 0xe2, 0xca, 0xfe]).ok(), Some(Network::Testnet));
-    assert_eq!(deserialize(&[0xfa, 0xbf, 0xb5, 0xda]).ok(), Some(Network::Regtest));
+        assert_eq!(
+            deserialize(&[0xce, 0xe2, 0xca, 0xff]).ok(),
+            Some(Network::Bitcoin)
+        );
+        assert_eq!(
+            deserialize(&[0xce, 0xe2, 0xca, 0xfe]).ok(),
+            Some(Network::Testnet)
+        );
+        assert_eq!(
+            deserialize(&[0xfa, 0xbf, 0xb5, 0xda]).ok(),
+            Some(Network::Regtest)
+        );
 
-    let bad: Result<Network, _> = deserialize("fakenet".as_bytes());
-    assert!(bad.is_err());
-  }
+        let bad: Result<Network, _> = deserialize("fakenet".as_bytes());
+        assert!(bad.is_err());
+    }
 
-  #[test]
-  fn string_test() {
-      assert_eq!(Network::Bitcoin.to_string(), "syscoin");
-      assert_eq!(Network::Testnet.to_string(), "syscointestnet");
-      assert_eq!(Network::Regtest.to_string(), "regtest");
+    #[test]
+    fn string_test() {
+        assert_eq!(Network::Bitcoin.to_string(), "syscoin");
+        assert_eq!(Network::Testnet.to_string(), "syscointestnet");
+        assert_eq!(Network::Regtest.to_string(), "regtest");
 
-      assert_eq!("syscoin".parse::<Network>().unwrap(), Network::Bitcoin);
-      assert_eq!("syscointestnet".parse::<Network>().unwrap(), Network::Testnet);
-      assert_eq!("regtest".parse::<Network>().unwrap(), Network::Regtest);
-      assert!("fakenet".parse::<Network>().is_err());
-  }
+        assert_eq!("syscoin".parse::<Network>().unwrap(), Network::Bitcoin);
+        assert_eq!(
+            "syscointestnet".parse::<Network>().unwrap(),
+            Network::Testnet
+        );
+        assert_eq!("regtest".parse::<Network>().unwrap(), Network::Regtest);
+        assert!("fakenet".parse::<Network>().is_err());
+    }
 }
-

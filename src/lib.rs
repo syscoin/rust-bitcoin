@@ -26,13 +26,11 @@
 #![crate_name = "bitcoin"]
 #![crate_type = "dylib"]
 #![crate_type = "rlib"]
-
 // Experimental features we need
 #![cfg_attr(all(test, feature = "unstable"), feature(test))]
-
 // Clippy whitelist
 #![cfg_attr(feature = "clippy", allow(needless_range_loop))] // suggests making a big mess of array newtypes
-#![cfg_attr(feature = "clippy", allow(extend_from_slice))]   // `extend_from_slice` only available since 1.6
+#![cfg_attr(feature = "clippy", allow(extend_from_slice))] // `extend_from_slice` only available since 1.6
 
 // Coding conventions
 #![deny(non_upper_case_globals)]
@@ -41,16 +39,20 @@
 #![deny(unused_mut)]
 #![deny(missing_docs)]
 
-extern crate syscoin_bech32;
+extern crate bitcoin_hashes;
+#[cfg(feature = "bitcoinconsensus")]
+extern crate bitcoinconsensus;
 extern crate byteorder;
-extern crate crypto;
 extern crate hex;
 extern crate rand;
 extern crate secp256k1;
-#[cfg(feature = "serde")] extern crate serde;
-#[cfg(feature = "strason")] extern crate strason;
-#[cfg(all(test, feature = "unstable"))] extern crate test;
-#[cfg(feature="bitcoinconsensus")] extern crate bitcoinconsensus;
+#[cfg(feature = "serde")]
+extern crate serde;
+#[cfg(feature = "strason")]
+extern crate strason;
+extern crate syscoin_bech32;
+#[cfg(all(test, feature = "unstable"))]
+extern crate test;
 
 #[cfg(test)]
 #[macro_use]
@@ -60,25 +62,22 @@ mod internal_macros;
 #[macro_use]
 pub mod network;
 pub mod blockdata;
-pub mod util;
 pub mod consensus;
+pub mod util;
 
 pub use blockdata::block::Block;
 pub use blockdata::block::BlockHeader;
 pub use blockdata::script::Script;
+pub use blockdata::transaction::OutPoint;
+pub use blockdata::transaction::SigHashType;
 pub use blockdata::transaction::Transaction;
 pub use blockdata::transaction::TxIn;
 pub use blockdata::transaction::TxOut;
-pub use blockdata::transaction::OutPoint;
-pub use blockdata::transaction::SigHashType;
 pub use consensus::encode::VarInt;
 pub use network::constants::Network;
-pub use util::Error;
 pub use util::address::Address;
-pub use util::hash::BitcoinHash;
-pub use util::privkey::Privkey;
 pub use util::decimal::Decimal;
 pub use util::decimal::UDecimal;
-
-#[cfg(feature = "fuzztarget")]
-pub mod fuzz_util;
+pub use util::hash::BitcoinHash;
+pub use util::privkey::Privkey;
+pub use util::Error;

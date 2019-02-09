@@ -21,12 +21,16 @@
 //! altcoins with different granularity may require a wider type.
 //!
 
+#[cfg(feature = "serde-decimal")]
+use std::error;
+#[cfg(feature = "serde-decimal")]
+use std::str::FromStr;
 use std::{fmt, ops};
-#[cfg(feature = "serde-decimal")] use std::error;
-#[cfg(feature = "serde-decimal")] use std::str::FromStr;
 
-#[cfg(feature = "serde-decimal")] use serde;
-#[cfg(feature = "serde-decimal")] use strason::{self, Json};
+#[cfg(feature = "serde-decimal")]
+use serde;
+#[cfg(feature = "serde-decimal")]
+use strason::{self, Json};
 
 /// A fixed-point decimal type
 #[derive(Copy, Clone, Debug, Eq, Ord)]
@@ -54,7 +58,8 @@ impl PartialOrd<Decimal> for Decimal {
     fn partial_cmp(&self, other: &Decimal) -> Option<::std::cmp::Ordering> {
         use std::cmp::max;
         let exp = max(self.exponent(), other.exponent());
-        self.integer_value(exp).partial_cmp(&other.integer_value(exp))
+        self.integer_value(exp)
+            .partial_cmp(&other.integer_value(exp))
     }
 }
 
@@ -78,13 +83,15 @@ impl ops::Add for Decimal {
     fn add(self, other: Decimal) -> Decimal {
         if self.exponent > other.exponent {
             Decimal {
-                mantissa: other.mantissa * 10i64.pow((self.exponent - other.exponent) as u32) + self.mantissa,
-                exponent: self.exponent
+                mantissa: other.mantissa * 10i64.pow((self.exponent - other.exponent) as u32)
+                    + self.mantissa,
+                exponent: self.exponent,
             }
         } else {
             Decimal {
-                mantissa: self.mantissa * 10i64.pow((other.exponent - self.exponent) as u32) + other.mantissa,
-                exponent: other.exponent
+                mantissa: self.mantissa * 10i64.pow((other.exponent - self.exponent) as u32)
+                    + other.mantissa,
+                exponent: other.exponent,
             }
         }
     }
@@ -93,13 +100,20 @@ impl ops::Add for Decimal {
 impl ops::Neg for Decimal {
     type Output = Decimal;
     #[inline]
-    fn neg(self) -> Decimal { Decimal { mantissa: -self.mantissa, exponent: self.exponent } }
+    fn neg(self) -> Decimal {
+        Decimal {
+            mantissa: -self.mantissa,
+            exponent: self.exponent,
+        }
+    }
 }
 
 impl ops::Sub for Decimal {
     type Output = Decimal;
     #[inline]
-    fn sub(self, other: Decimal) -> Decimal { self + (-other) }
+    fn sub(self, other: Decimal) -> Decimal {
+        self + (-other)
+    }
 }
 
 impl Decimal {
@@ -107,16 +121,20 @@ impl Decimal {
     pub fn new(mantissa: i64, exponent: usize) -> Decimal {
         Decimal {
             mantissa: mantissa,
-            exponent: exponent
+            exponent: exponent,
         }
     }
 
     /// Returns the mantissa
     #[inline]
-    pub fn mantissa(&self) -> i64 { self.mantissa }
+    pub fn mantissa(&self) -> i64 {
+        self.mantissa
+    }
     /// Returns the exponent
     #[inline]
-    pub fn exponent(&self) -> usize { self.exponent }
+    pub fn exponent(&self) -> usize {
+        self.exponent
+    }
 
     /// Get the decimal's value in an integer type, by multiplying
     /// by some power of ten to ensure the returned value is 10 **
@@ -131,7 +149,9 @@ impl Decimal {
 
     /// Returns whether or not the number is nonnegative
     #[inline]
-    pub fn nonnegative(&self) -> bool { self.mantissa >= 0 }
+    pub fn nonnegative(&self) -> bool {
+        self.mantissa >= 0
+    }
 
     // Converts a JSON number to a Decimal previously parsed by strason
     #[cfg(feature = "serde-decimal")]
@@ -145,16 +165,16 @@ impl Decimal {
 
         for b in s.as_bytes() {
             match *b {
-                b'-' => { negative = true; }
+                b'-' => {
+                    negative = true;
+                }
                 b'0'...b'9' => {
                     match 10i64.checked_mul(mantissa) {
                         None => return Err(ParseDecimalError::TooBig),
-                        Some(n) => {
-                            match n.checked_add((b - b'0') as i64) {
-                                None => return Err(ParseDecimalError::TooBig),
-                                Some(n) => mantissa = n,
-                            }
-                        }
+                        Some(n) => match n.checked_add((b - b'0') as i64) {
+                            None => return Err(ParseDecimalError::TooBig),
+                            Some(n) => mantissa = n,
+                        },
                     }
                     if past_dec {
                         exponent += 1;
@@ -163,11 +183,15 @@ impl Decimal {
                         }
                     }
                 }
-                b'.' => { past_dec = true; }
+                b'.' => {
+                    past_dec = true;
+                }
                 _ => { /* whitespace or something, just ignore it */ }
             }
         }
-        if negative { mantissa *= -1; }
+        if negative {
+            mantissa *= -1;
+        }
         Ok(Decimal {
             mantissa: mantissa,
             exponent: exponent,
@@ -239,7 +263,8 @@ impl PartialOrd<UDecimal> for UDecimal {
     fn partial_cmp(&self, other: &UDecimal) -> Option<::std::cmp::Ordering> {
         use std::cmp::max;
         let exp = max(self.exponent(), other.exponent());
-        self.integer_value(exp).partial_cmp(&other.integer_value(exp))
+        self.integer_value(exp)
+            .partial_cmp(&other.integer_value(exp))
     }
 }
 
@@ -259,13 +284,15 @@ impl ops::Add for UDecimal {
     fn add(self, other: UDecimal) -> UDecimal {
         if self.exponent > other.exponent {
             UDecimal {
-                mantissa: other.mantissa * 10u64.pow((self.exponent - other.exponent) as u32) + self.mantissa,
-                exponent: self.exponent
+                mantissa: other.mantissa * 10u64.pow((self.exponent - other.exponent) as u32)
+                    + self.mantissa,
+                exponent: self.exponent,
             }
         } else {
             UDecimal {
-                mantissa: self.mantissa * 10u64.pow((other.exponent - self.exponent) as u32) + other.mantissa,
-                exponent: other.exponent
+                mantissa: self.mantissa * 10u64.pow((other.exponent - self.exponent) as u32)
+                    + other.mantissa,
+                exponent: other.exponent,
             }
         }
     }
@@ -276,16 +303,20 @@ impl UDecimal {
     pub fn new(mantissa: u64, exponent: usize) -> UDecimal {
         UDecimal {
             mantissa: mantissa,
-            exponent: exponent
+            exponent: exponent,
         }
     }
 
     /// Returns the mantissa
     #[inline]
-    pub fn mantissa(&self) -> u64 { self.mantissa }
+    pub fn mantissa(&self) -> u64 {
+        self.mantissa
+    }
     /// Returns the exponent
     #[inline]
-    pub fn exponent(&self) -> usize { self.exponent }
+    pub fn exponent(&self) -> usize {
+        self.exponent
+    }
 
     /// Get the decimal's value in an integer type, by multiplying
     /// by some power of ten to ensure the returned value is 10 **
@@ -312,12 +343,10 @@ impl UDecimal {
                 b'0'...b'9' => {
                     match 10u64.checked_mul(mantissa) {
                         None => return Err(ParseDecimalError::TooBig),
-                        Some(n) => {
-                            match n.checked_add((b - b'0') as u64) {
-                                None => return Err(ParseDecimalError::TooBig),
-                                Some(n) => mantissa = n,
-                            }
-                        }
+                        Some(n) => match n.checked_add((b - b'0') as u64) {
+                            None => return Err(ParseDecimalError::TooBig),
+                            Some(n) => mantissa = n,
+                        },
                     }
                     if past_dec {
                         exponent += 1;
@@ -326,7 +355,9 @@ impl UDecimal {
                         }
                     }
                 }
-                b'.' => { past_dec = true; }
+                b'.' => {
+                    past_dec = true;
+                }
                 _ => { /* whitespace or something, just ignore it */ }
             }
         }
@@ -533,13 +564,13 @@ mod tests {
 
     #[test]
     fn arithmetic() {
-        let d1 = Decimal::new(5, 1);   //  0.5
-        let d2 = Decimal::new(-2, 2);  // -0.02
-        let d3 = Decimal::new(3, 0);   //  3.0
-        let d4 = Decimal::new(0, 5);  //   0.00000
-        let u1 = UDecimal::new(5, 1);   //  0.5
-        let u3 = UDecimal::new(3, 0);   //  3.0
-        let u4 = UDecimal::new(0, 5);  //   0.00000
+        let d1 = Decimal::new(5, 1); //  0.5
+        let d2 = Decimal::new(-2, 2); // -0.02
+        let d3 = Decimal::new(3, 0); //  3.0
+        let d4 = Decimal::new(0, 5); //   0.00000
+        let u1 = UDecimal::new(5, 1); //  0.5
+        let u3 = UDecimal::new(3, 0); //  3.0
+        let u4 = UDecimal::new(0, 5); //   0.00000
 
         assert!(d1.nonnegative());
         assert!(!d2.nonnegative());
