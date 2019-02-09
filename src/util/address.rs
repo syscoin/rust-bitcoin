@@ -487,32 +487,19 @@ mod tests {
             hex_script!("76a914ff99864ce1a887e00c9c8615210d6267edd7d7a588ac")
         );
 
-        let addr =
-            Address::from_str("ts1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7")
-                .unwrap();
-        let json = Json::from_serialize(&addr).unwrap();
-        assert_eq!(
-            json.string(),
-            Some("ts1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7")
-        );
-        let into: Address = json.into_deserialize().unwrap();
-        assert_eq!(addr.to_string(), into.to_string());
-        assert_eq!(
-            into.script_pubkey(),
-            hex_script!("00201863143c14c5166804bd19203356da136c985678cd4d27a1b8c6329604903262")
-        );
 
-        let addr = Address::from_str("scrt1q2nfxmhd4n3c8834pj72xagvyr9gl57n5r94fsl").unwrap();
+
+        let addr = Address::from_str("sc1q8fjfq7gjd6nma8lh4qxr9qxtj3yz5sg0vkr2tk").unwrap();
         let json = Json::from_serialize(&addr).unwrap();
         assert_eq!(
             json.string(),
-            Some("scrt1q2nfxmhd4n3c8834pj72xagvyr9gl57n5r94fsl")
+            Some("sc1q8fjfq7gjd6nma8lh4qxr9qxtj3yz5sg0vkr2tk")
         );
         let into: Address = json.into_deserialize().unwrap();
         assert_eq!(addr.to_string(), into.to_string());
         assert_eq!(
             into.script_pubkey(),
-            hex_script!("001454d26dddb59c7073c6a197946ea1841951fa7a74")
+            hex_script!("00143a649079126ea7be9ff7a80c3280cb94482a410f")
         );
     }
 }
